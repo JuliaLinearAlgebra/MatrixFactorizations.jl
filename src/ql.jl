@@ -57,11 +57,11 @@ function qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
     @assert !has_offset_axes(A)
     m, n = size(A)
     τ = zeros(T, min(m,n))
-    for k = 1:min(m - 1 + !(T<:Real), n)
-        x = view(A, k:m, k)
+    for k = min(m, n):-1:(1 + (T<:Real))
+        x = view(A, k:-1:1, k)
         τk = reflector!(x)
         τ[k] = τk
-        reflectorApply!(x, τk, view(A, k:m, k + 1:n))
+        reflectorApply!(x, τk, view(A, k:-1:1, 1:k-1))
     end
     QL(A, τ)
 end
@@ -207,7 +207,7 @@ end
 function getproperty(F::QL, d::Symbol)
     m, n = size(F)
     if d == :L
-        return tril!(getfield(F, :factors)[1:min(m,n), 1:n])
+        return tril!(getfield(F, :factors)[1:m, 1:min(m,n)])
     elseif d == :Q
         return QLPackedQ(getfield(F, :factors), F.τ)
     else
@@ -242,6 +242,8 @@ QLPackedQ{T}(Q::QLPackedQ) where {T} = QLPackedQ(convert(AbstractMatrix{T}, Q.fa
 AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
 AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
 
+size(Q::QLPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
+
 size(F::QL, dim::Integer) = size(getfield(F, :factors), dim)
 size(F::QL) = size(getfield(F, :factors))
 
@@ -257,15 +259,15 @@ function lmul!(A::QLPackedQ, B::AbstractVecOrMat)
     end
     Afactors = A.factors
     @inbounds begin
-        for k = min(mA,nA):-1:1
+        for k = 1:min(mA,nA)
             for j = 1:nB
                 vBj = B[k,j]
-                for i = k+1:mB
+                for i = 1:k-1
                     vBj += conj(Afactors[i,k])*B[i,j]
                 end
                 vBj = A.τ[k]*vBj
                 B[k,j] -= vBj
-                for i = k+1:mB
+                for i = 1:k-1
                     B[i,j] -= Afactors[i,k]*vBj
                 end
             end
@@ -285,15 +287,15 @@ function lmul!(adjA::Adjoint{<:Any,<:QLPackedQ}, B::AbstractVecOrMat)
     end
     Afactors = A.factors
     @inbounds begin
-        for k = 1:min(mA,nA)
+        for k = min(mA,nA):-1:1
             for j = 1:nB
                 vBj = B[k,j]
-                for i = k+1:mB
+                for i = 1:k-1
                     vBj += conj(Afactors[i,k])*B[i,j]
                 end
                 vBj = conj(A.τ[k])*vBj
                 B[k,j] -= vBj
-                for i = k+1:mB
+                for i = 1:k-1
                     B[i,j] -= Afactors[i,k]*vBj
                 end
             end
@@ -312,15 +314,15 @@ function rmul!(A::AbstractMatrix,Q::QLPackedQ)
     end
     Qfactors = Q.factors
     @inbounds begin
-        for k = 1:min(mQ,nQ)
+        for k = min(mQ,nQ):-1:1
             for i = 1:mA
                 vAi = A[i,k]
-                for j = k+1:mQ
+                for j = 1:k-1
                     vAi += A[i,j]*Qfactors[j,k]
                 end
                 vAi = vAi*Q.τ[k]
                 A[i,k] -= vAi
-                for j = k+1:nA
+                for j = 1:k-1
                     A[i,j] -= vAi*conj(Qfactors[j,k])
                 end
             end
@@ -339,15 +341,15 @@ function rmul!(A::StridedMatrix, adjQ::Adjoint{<:Any,<:QLPackedQ})
     end
     Qfactors = Q.factors
     @inbounds begin
-        for k = min(mQ,nQ):-1:1
+        for k = 1:min(mQ,nQ)
             for i = 1:mA
                 vAi = A[i,k]
-                for j = k+1:mQ
+                for j = 1:k-1
                     vAi += A[i,j]*Qfactors[j,k]
                 end
                 vAi = vAi*conj(Q.τ[k])
                 A[i,k] -= vAi
-                for j = k+1:nA
+                for j = 1:k-1
                     A[i,j] -= vAi*conj(Qfactors[j,k])
                 end
             end
@@ -383,7 +385,7 @@ function ldiv!(A::QL{T}, B::AbstractMatrix{T}) where T
                 end
             end
         end
-        LinearAlgebra.ldiv!(UpperTriangular(view(L, :, 1:minmn)), view(B, 1:minmn, :))
+        LinearAlgebra.ldiv!(LowerTriangular(view(L, 1:minmn, :)), view(B, 1:minmn, :))
         if n > m # Apply elementary transformation to solution
             B[m + 1:mB,1:nB] .= zero(T)
             for j = 1:nB
@@ -421,3 +423,26 @@ function (\)(A::QL{TA}, B::AbstractVecOrMat{TB}) where {TA,TB}
 end
 
 
+function (\)(A::QL{T}, BIn::VecOrMat{Complex{T}}) where T<:BlasReal
+    @assert !has_offset_axes(BIn)
+    m, n = size(A)
+    m == size(BIn, 1) || throw(DimensionMismatch("left hand side has $m rows, but right hand side has $(size(BIn,1)) rows"))
+
+# |z1|z3|  reinterpret  |x1|x2|x3|x4|  transpose  |x1|y1|  reshape  |x1|y1|x3|y3|
+# |z2|z4|      ->       |y1|y2|y3|y4|     ->      |x2|y2|     ->    |x2|y2|x4|y4|
+#                                                 |x3|y3|
+#                                                 |x4|y4|
+    B = reshape(copy(transpose(reinterpret(T, reshape(BIn, (1, length(BIn)))))), size(BIn, 1), 2*size(BIn, 2))
+
+    X = _zeros(T, B, n)
+    X[1:size(B, 1), :] = B
+
+    ldiv!(A, X)
+
+# |z1|z3|  reinterpret  |x1|x2|x3|x4|  transpose  |x1|y1|  reshape  |x1|y1|x3|y3|
+# |z2|z4|      <-       |y1|y2|y3|y4|     <-      |x2|y2|     <-    |x2|y2|x4|y4|
+#                                                 |x3|y3|
+#                                                 |x4|y4|
+    XX = reshape(collect(reinterpret(Complex{T}, copy(transpose(reshape(X, div(length(X), 2), 2))))), _ret_size(A, BIn))
+    return _cut_B(XX, 1:n)
+end

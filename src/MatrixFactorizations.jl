@@ -8,7 +8,7 @@ import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
             qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, has_offset_axes,
             chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
-            QRPackedQ, reflector!, reflectorApply!, AbstractQ, _zeros
+            QRPackedQ, reflector!, reflectorApply!, AbstractQ, _zeros, _cut_B, _ret_size
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
                 >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
@@ -17,11 +17,12 @@ import Base: convert, size, view, unsafe_indices,
                 first, last, size, length, unsafe_length, step,
                 to_indices, to_index, show, fill!, promote_op,
                 MultiplicativeInverses, OneTo, ReshapedArray,
+                Array, Matrix, Vector, AbstractArray, AbstractMatrix, AbstractVector, 
                                similar, copy, convert, promote_rule, rand,
                             IndexStyle, real, imag, Slice, pointer, unsafe_convert, copyto!
 
 
-export ql                           
+export ql, ql!                          
 
 include("ql.jl")
 

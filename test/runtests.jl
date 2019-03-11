@@ -1,4 +1,4 @@
-using MatrixFactorizations, LinearAlgebra, Test
+using MatrixFactorizations, LinearAlgebra, Random, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!
 
 n = 10
@@ -19,6 +19,13 @@ bimg  = randn(n,2)/2
 # helper functions to unambiguously recover explicit forms of an implicit QL Q
 squareQ(Q::LinearAlgebra.AbstractQ) = (sq = size(Q.factors, 1); lmul!(Q, Matrix{eltype(Q)}(I, sq, sq)))
 rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
+
+@testset "Compare with QR" begin
+    Q, R = qr(areal[end:-1:1,end:-1:1])
+    Q̃, L = ql(areal)
+    @test R[end:-1:1,end:-1:1] ≈ L
+    @test Q[end:-1:1,end:-1:1] ≈ Q̃
+end
 
 @testset for eltya in (Float32, Float64, ComplexF32, ComplexF64, BigFloat, Int)
     raw_a = eltya == Int ? rand(1:7, n, n) : convert(Matrix{eltya}, eltya <: Complex ? complex.(areal, aimg) : areal)
@@ -64,24 +71,24 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
                     @test ql!(a[:, 1:5])\b == ql!(view(ac, :, 1:5))\b
                 end
                 qlstring = sprint((t, s) -> show(t, "text/plain", s), qla)
-                rstring  = sprint((t, s) -> show(t, "text/plain", s), r)
+                rstring  = sprint((t, s) -> show(t, "text/plain", s), l)
                 qstring  = sprint((t, s) -> show(t, "text/plain", s), q)
                 @test qlstring == "$(summary(qla))\nQ factor:\n$qstring\nL factor:\n$rstring"
             end
             @testset "Thin QL decomposition (without pivoting)" begin
                 qla   = @inferred ql(a[:, 1:n1], Val(false))
                 @inferred ql(a[:, 1:n1], Val(false))
-                q,r   = qla.Q, qla.L
+                q,l   = qla.Q, qla.L
                 @test_throws ErrorException qla.Z
                 @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
                 @test q'*rectangularQ(q) ≈ Matrix(I, a_1, n1)
-                @test q*r ≈ a[:, 1:n1]
+                @test q*l ≈ a[:, 1:n1]
                 @test q*b[1:n1] ≈ rectangularQ(q)*b[1:n1] atol=100ε
                 @test q*b ≈ squareQ(q)*b atol=100ε
                 @test_throws DimensionMismatch q*b[1:n1 + 1]
                 @test_throws DimensionMismatch b[1:n1 + 1]*q'
-                sq = size(q.factors, 2)
-                @test *(UpperTriangular(Matrix{eltyb}(I, sq, sq)), adjoint(q))*squareQ(q) ≈ Matrix(I, n1, a_1) atol=5000ε
+                sq = size(q.factors, 1)
+                @test *(LowerTriangular(Matrix{eltyb}(I, sq, sq)), adjoint(q))*squareQ(q) ≈ Matrix(I, a_1, a_1) atol=5000ε
                 if eltya != Int
                     @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab},q)
                 end
