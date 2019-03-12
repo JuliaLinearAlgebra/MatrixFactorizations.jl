@@ -22,7 +22,7 @@ import Base: convert, size, view, unsafe_indices,
                             IndexStyle, real, imag, Slice, pointer, unsafe_convert, copyto!
 
 
-export ql, ql!                          
+export ql, ql!, QL                        
 
 include("ql.jl")
 
