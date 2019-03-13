@@ -154,5 +154,5 @@ end
 @testset "Wide QL" begin
     A = randn(3,5)
     Q,L = ql(A)
-    Q*L ≈ A
+    @test Q*L ≈ A
 end
