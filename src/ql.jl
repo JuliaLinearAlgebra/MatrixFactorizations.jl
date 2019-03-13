@@ -34,18 +34,18 @@ The object has two fields:
 * `τ` is a vector  of length `min(m,n)` containing the coefficients ``\tau_i``.
 
 """
-struct QL{T,S<:AbstractMatrix{T}} <: Factorization{T}
+struct QL{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: Factorization{T}
     factors::S
-    τ::Vector{T}
+    τ::Tau
 
-    function QL{T,S}(factors, τ) where {T,S<:AbstractMatrix{T}}
+    function QL{T,S,Tau}(factors, τ) where {T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}}
         @assert !has_offset_axes(factors)
-        new{T,S}(factors, τ)
+        new{T,S,Tau}(factors, τ)
     end
 end
-QL(factors::AbstractMatrix{T}, τ::Vector{T}) where {T} = QL{T,typeof(factors)}(factors, τ)
+QL(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = QL{T,typeof(factors),typeof(τ)}(factors, τ)
 function QL{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
-    QL(convert(AbstractMatrix{T}, factors), convert(Vector{T}, τ))
+    QL(convert(AbstractMatrix{T}, factors), convert(AbstractVector{T}, τ))
 end
 
 # iteration for destructuring into components
@@ -189,7 +189,7 @@ function ql(v::AbstractVector)
 end
 
 # Conversions
-QL{T}(A::QL) where {T} = QL(convert(AbstractMatrix{T}, A.factors), convert(Vector{T}, A.τ))
+QL{T}(A::QL) where {T} = QL(convert(AbstractMatrix{T}, A.factors), convert(AbstractVector{T}, A.τ))
 Factorization{T}(A::QL{T}) where {T} = A
 Factorization{T}(A::QL) where {T} = QL{T}(A)
 AbstractMatrix(F::QL) = F.Q * F.L
@@ -225,21 +225,21 @@ Base.propertynames(F::QL, private::Bool=false) =
 
 The orthogonal/unitary ``Q`` matrix of a QL factorization stored in [`QL`](@ref).
 """
-struct QLPackedQ{T,S<:AbstractMatrix{T}} <: AbstractQ{T}
+struct QLPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: AbstractQ{T}
     factors::S
-    τ::Vector{T}
+    τ::Tau
 
-    function QLPackedQ{T,S}(factors, τ) where {T,S<:AbstractMatrix{T}}
+    function QLPackedQ{T,S,Tau}(factors, τ) where {T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}}
         @assert !has_offset_axes(factors)
-        new{T,S}(factors, τ)
+        new{T,S,Tau}(factors, τ)
     end
 end
-QLPackedQ(factors::AbstractMatrix{T}, τ::Vector{T}) where {T} = QLPackedQ{T,typeof(factors)}(factors, τ)
+QLPackedQ(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = QLPackedQ{T,typeof(factors),typeof(τ)}(factors, τ)
 function QLPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
-    QLPackedQ(convert(AbstractMatrix{T}, factors), convert(Vector{T}, τ))
+    QLPackedQ(convert(AbstractMatrix{T}, factors), convert(AbstractVector{T}, τ))
 end
 
-QLPackedQ{T}(Q::QLPackedQ) where {T} = QLPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(Vector{T}, Q.τ))
+QLPackedQ{T}(Q::QLPackedQ) where {T} = QLPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
 AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
 AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
 
