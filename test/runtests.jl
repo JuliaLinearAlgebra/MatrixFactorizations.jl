@@ -150,3 +150,9 @@ end
     c  = randn(2)
     @test_broken A \b ≈ ldiv!(c, ql(A ), b)
 end
+
+@testset "Wide QL" begin
+    A = randn(3,5)
+    Q,L = ql(A)
+    Q*L ≈ A
+end

@@ -57,11 +57,12 @@ function qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
     @assert !has_offset_axes(A)
     m, n = size(A)
     τ = zeros(T, min(m,n))
-    for k = min(m, n):-1:(1 + (T<:Real))
-        x = view(A, k:-1:1, k)
+    for k = min(m,n):-1:(1 + (T<:Real))
+        ν = k+n-min(m,n)
+        x = view(A, k:-1:1, ν)
         τk = reflector!(x)
         τ[k] = τk
-        reflectorApply!(x, τk, view(A, k:-1:1, 1:k-1))
+        reflectorApply!(x, τk, view(A, k:-1:1, 1:ν-1))
     end
     QL(A, τ)
 end
@@ -207,7 +208,7 @@ end
 function getproperty(F::QL, d::Symbol)
     m, n = size(F)
     if d == :L
-        return tril!(getfield(F, :factors)[1:m, 1:min(m,n)])
+        return tril!(copy(getfield(F, :factors)), max(n-m,0))
     elseif d == :Q
         return QLPackedQ(getfield(F, :factors), F.τ)
     else
@@ -260,15 +261,16 @@ function lmul!(A::QLPackedQ, B::AbstractVecOrMat)
     Afactors = A.factors
     @inbounds begin
         for k = 1:min(mA,nA)
+            ν = k+nA-min(mA,nA)
             for j = 1:nB
                 vBj = B[k,j]
                 for i = 1:k-1
-                    vBj += conj(Afactors[i,k])*B[i,j]
+                    vBj += conj(Afactors[i,ν])*B[i,j]
                 end
                 vBj = A.τ[k]*vBj
                 B[k,j] -= vBj
                 for i = 1:k-1
-                    B[i,j] -= Afactors[i,k]*vBj
+                    B[i,j] -= Afactors[i,ν]*vBj
                 end
             end
         end
@@ -288,15 +290,16 @@ function lmul!(adjA::Adjoint{<:Any,<:QLPackedQ}, B::AbstractVecOrMat)
     Afactors = A.factors
     @inbounds begin
         for k = min(mA,nA):-1:1
+            ν = k+nA-min(mA,nA)
             for j = 1:nB
                 vBj = B[k,j]
                 for i = 1:k-1
-                    vBj += conj(Afactors[i,k])*B[i,j]
+                    vBj += conj(Afactors[i,ν])*B[i,j]
                 end
                 vBj = conj(A.τ[k])*vBj
                 B[k,j] -= vBj
                 for i = 1:k-1
-                    B[i,j] -= Afactors[i,k]*vBj
+                    B[i,j] -= Afactors[i,ν]*vBj
                 end
             end
         end
@@ -315,15 +318,16 @@ function rmul!(A::AbstractMatrix,Q::QLPackedQ)
     Qfactors = Q.factors
     @inbounds begin
         for k = min(mQ,nQ):-1:1
+            ν = k+nA-min(mA,nA)
             for i = 1:mA
                 vAi = A[i,k]
                 for j = 1:k-1
-                    vAi += A[i,j]*Qfactors[j,k]
+                    vAi += A[i,j]*Qfactors[j,ν]
                 end
                 vAi = vAi*Q.τ[k]
                 A[i,k] -= vAi
                 for j = 1:k-1
-                    A[i,j] -= vAi*conj(Qfactors[j,k])
+                    A[i,j] -= vAi*conj(Qfactors[j,ν])
                 end
             end
         end
@@ -342,15 +346,16 @@ function rmul!(A::StridedMatrix, adjQ::Adjoint{<:Any,<:QLPackedQ})
     Qfactors = Q.factors
     @inbounds begin
         for k = 1:min(mQ,nQ)
+            ν = k+nA-min(mA,nA)
             for i = 1:mA
                 vAi = A[i,k]
                 for j = 1:k-1
-                    vAi += A[i,j]*Qfactors[j,k]
+                    vAi += A[i,j]*Qfactors[j,ν]
                 end
                 vAi = vAi*conj(Q.τ[k])
                 A[i,k] -= vAi
                 for j = 1:k-1
-                    A[i,j] -= vAi*conj(Qfactors[j,k])
+                    A[i,j] -= vAi*conj(Qfactors[j,ν])
                 end
             end
         end
