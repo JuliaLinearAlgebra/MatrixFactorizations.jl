@@ -77,6 +77,49 @@ end
     return A
 end
 
+# Should be in Base, StridedVector -> AbstractVector
+
+function (*)(A::AbstractQ, b::AbstractVector)
+   TAb = promote_type(eltype(A), eltype(b))
+   Anew = convert(AbstractMatrix{TAb}, A)
+   if size(A.factors, 1) == length(b)
+       bnew = copy_oftype(b, TAb)
+   elseif size(A.factors, 2) == length(b)
+       bnew = [b; zeros(TAb, size(A.factors, 1) - length(b))]
+   else
+       throw(DimensionMismatch("vector must have length either $(size(A.factors, 1)) or $(size(A.factors, 2))"))
+   end
+   lmul!(Anew, bnew)
+end
+function (*)(A::AbstractQ, B::AbstractMatrix)
+   TAB = promote_type(eltype(A), eltype(B))
+   Anew = convert(AbstractMatrix{TAB}, A)
+   if size(A.factors, 1) == size(B, 1)
+       Bnew = copy_oftype(B, TAB)
+   elseif size(A.factors, 2) == size(B, 1)
+       Bnew = [B; zeros(TAB, size(A.factors, 1) - size(B,1), size(B, 2))]
+   else
+       throw(DimensionMismatch("first dimension of matrix must have size either $(size(A.factors, 1)) or $(size(A.factors, 2))"))
+   end
+   lmul!(Anew, Bnew)
+end
+
+function *(Q::AbstractQ, adjB::Adjoint{<:Any,<:AbstractVecOrMat})
+   B = adjB.parent
+   TQB = promote_type(eltype(Q), eltype(B))
+   Bc = similar(B, TQB, (size(B, 2), size(B, 1)))
+   adjoint!(Bc, B)
+   return lmul!(convert(AbstractMatrix{TQB}, Q), Bc)
+end
+function *(adjQ::Adjoint{<:Any,<:AbstractQ}, adjB::Adjoint{<:Any,<:AbstractVecOrMat})
+   Q, B = adjQ.parent, adjB.parent
+   TQB = promote_type(eltype(Q), eltype(B))
+   Bc = similar(B, TQB, (size(B, 2), size(B, 1)))
+   adjoint!(Bc, B)
+   return lmul!(adjoint(convert(AbstractMatrix{TQB}, Q)), Bc)
+end
+
+
 include("ql.jl")
 
 end #module
