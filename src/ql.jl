@@ -205,12 +205,17 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::QL)
     show(io, mime, F.L)
 end
 
-function getproperty(F::QL, d::Symbol)
+@inline function getL(F::QL) 
     m, n = size(F)
+    tril!(copy(getfield(F, :factors)), max(n-m,0))
+end
+@inline getQ(F::QL) = QLPackedQ(getfield(F, :factors), F.τ)
+
+function getproperty(F::QL, d::Symbol)
     if d == :L
-        return tril!(copy(getfield(F, :factors)), max(n-m,0))
+        return getL(F)
     elseif d == :Q
-        return QLPackedQ(getfield(F, :factors), F.τ)
+        return getQ(F)
     else
         getfield(F, d)
     end
@@ -316,9 +321,9 @@ function rmul!(A::AbstractMatrix,Q::QLPackedQ)
         throw(DimensionMismatch("matrix A has dimensions ($mA,$nA) but matrix Q has dimensions ($mQ, $nQ)"))
     end
     Qfactors = Q.factors
-    @inbounds begin
+    begin
         for k = min(mQ,nQ):-1:1
-            ν = k+nA-min(mA,nA)
+            ν = k+nQ-min(mQ,nQ)
             for i = 1:mA
                 vAi = A[i,k]
                 for j = 1:k-1
@@ -336,7 +341,7 @@ function rmul!(A::AbstractMatrix,Q::QLPackedQ)
 end
 
 ### AQc
-function rmul!(A::StridedMatrix, adjQ::Adjoint{<:Any,<:QLPackedQ})
+function rmul!(A::AbstractMatrix, adjQ::Adjoint{<:Any,<:QLPackedQ})
     Q = adjQ.parent
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
@@ -346,7 +351,7 @@ function rmul!(A::StridedMatrix, adjQ::Adjoint{<:Any,<:QLPackedQ})
     Qfactors = Q.factors
     @inbounds begin
         for k = 1:min(mQ,nQ)
-            ν = k+nA-min(mA,nA)
+            ν = k+nQ-min(mQ,nQ)
             for i = 1:mA
                 vAi = A[i,k]
                 for j = 1:k-1

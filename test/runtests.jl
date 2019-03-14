@@ -156,3 +156,29 @@ end
     Q,L = ql(A)
     @test Q*L ≈ A
 end
+
+@testset "lmul!/rmul!" begin
+    A = randn(100,100)
+    Q,L = ql(A)
+    x = randn(100)
+    b = randn(100,2)
+    @test lmul!(Q, copy(x)) ≈ Matrix(Q)*x
+    @test lmul!(Q, copy(b)) ≈ Matrix(Q)*b
+    @test lmul!(Q', copy(x)) ≈ Matrix(Q)'*x
+    @test lmul!(Q', copy(b)) ≈ Matrix(Q)'*b
+    c = randn(2,100)
+    @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
+    @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
+
+    A = randn(100,103)
+    Q,L = ql(A)
+    x = randn(100)
+    b = randn(100,2)
+    @test lmul!(Q, copy(x)) ≈ Matrix(Q)*x
+    @test lmul!(Q, copy(b)) ≈ Matrix(Q)*b
+    @test lmul!(Q', copy(x)) ≈ Matrix(Q)'*x
+    @test lmul!(Q', copy(b)) ≈ Matrix(Q)'*b
+    c = randn(2,100)
+    @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
+    @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
+end
