@@ -11,8 +11,7 @@ import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!
             QRPackedQ, AbstractQ, _zeros, _cut_B, _ret_size
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
-                >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds,
-                has_offset_axes
+                >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
 
 import Base: convert, size, view, unsafe_indices,
                 first, last, size, length, unsafe_length, step,
@@ -24,7 +23,10 @@ import Base: convert, size, view, unsafe_indices,
 
 
 if VERSION < v"1.2-"
-   require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
+    import Base: has_offset_axes
+    require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
+else
+    import Base: require_one_based_indexing    
 end                            
 
 export ql, ql!, QL                        
