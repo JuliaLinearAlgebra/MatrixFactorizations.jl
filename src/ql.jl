@@ -39,7 +39,7 @@ struct QL{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: Factorization{T}
     τ::Tau
 
     function QL{T,S,Tau}(factors, τ) where {T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}}
-        @assert !has_offset_axes(factors)
+        require_one_based_indexing(factors)
         new{T,S,Tau}(factors, τ)
     end
 end
@@ -54,7 +54,7 @@ Base.iterate(S::QL, ::Val{:L}) = (S.L, Val(:done))
 Base.iterate(S::QL, ::Val{:done}) = nothing
 
 function qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
-    @assert !has_offset_axes(A)
+    require_one_based_indexing(A)
     m, n = size(A)
     τ = zeros(T, min(m,n))
     for k = min(m,n):-1:(1 + (T<:Real))
@@ -171,20 +171,20 @@ true
 ```
 """
 function ql(A::AbstractMatrix{T}, arg) where T
-    @assert !has_offset_axes(A)
+    require_one_based_indexing(A)
     AA = similar(A, _qleltype(T), size(A))
     copyto!(AA, A)
     return ql!(AA, arg)
 end
 function ql(A::AbstractMatrix{T}) where T
-    @assert !has_offset_axes(A)
+    require_one_based_indexing(A)
     AA = similar(A, _qleltype(T), size(A))
     copyto!(AA, A)
     return ql!(AA)
 end
 ql(x::Number) = ql(fill(x,1,1))
 function ql(v::AbstractVector)
-    @assert !has_offset_axes(v)
+    require_one_based_indexing(v)
     ql(reshape(v, (length(v), 1)))
 end
 
@@ -235,7 +235,7 @@ struct QLPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: AbstractQ{T}
     τ::Tau
 
     function QLPackedQ{T,S,Tau}(factors, τ) where {T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}}
-        @assert !has_offset_axes(factors)
+        require_one_based_indexing(factors)
         new{T,S,Tau}(factors, τ)
     end
 end
@@ -257,7 +257,7 @@ size(F::QL) = size(getfield(F, :factors))
 ## Multiplication by Q
 ### QB
 function lmul!(A::QLPackedQ, B::AbstractVecOrMat)
-    @assert !has_offset_axes(B)
+    require_one_based_indexing(B)
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
     if mA != mB
@@ -285,7 +285,7 @@ end
 
 
 function lmul!(adjA::Adjoint{<:Any,<:QLPackedQ}, B::AbstractVecOrMat)
-    @assert !has_offset_axes(B)
+    require_one_based_indexing(B)
     A = adjA.parent
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
@@ -419,7 +419,7 @@ ldiv!(A::QL, B::AbstractVector) = ldiv!(A, reshape(B, length(B), 1))[:]
 
 
 function (\)(A::QL{TA}, B::AbstractVecOrMat{TB}) where {TA,TB}
-    @assert !has_offset_axes(B)
+    require_one_based_indexing(B)
     S = promote_type(TA,TB)
     m, n = size(A)
     m == size(B,1) || throw(DimensionMismatch("left hand side has $m rows, but right hand side has $(size(B,1)) rows"))
@@ -434,7 +434,7 @@ end
 
 
 function (\)(A::QL{T}, BIn::VecOrMat{Complex{T}}) where T<:BlasReal
-    @assert !has_offset_axes(BIn)
+    require_one_based_indexing(BIn)
     m, n = size(A)
     m == size(BIn, 1) || throw(DimensionMismatch("left hand side has $m rows, but right hand side has $(size(BIn,1)) rows"))
 

@@ -6,12 +6,13 @@ import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
 import LinearAlgebra.BLAS: libblas
 import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
-            qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, has_offset_axes,
+            qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular,
             chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
             QRPackedQ, AbstractQ, _zeros, _cut_B, _ret_size
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
-                >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
+                >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds,
+                has_offset_axes
 
 import Base: convert, size, view, unsafe_indices,
                 first, last, size, length, unsafe_length, step,
@@ -22,12 +23,16 @@ import Base: convert, size, view, unsafe_indices,
                             IndexStyle, real, imag, Slice, pointer, unsafe_convert, copyto!
 
 
+if VERSION < v"1.2-"
+   require_one_based_indexing(A...) = !has_offset_axes(A...) || throw(ArgumentError("offset arrays are not supported but got an array with index other than 1"))
+end                            
+
 export ql, ql!, QL                        
 
 # Elementary reflection similar to LAPACK. The reflector is not Hermitian but
 # ensures that tridiagonalization of Hermitian matrices become real. See lawn72
 @inline function reflector!(x::AbstractVector)
-    !has_offset_axes(x)
+    require_one_based_indexing(x)
     n = length(x)
     n == 0 && return zero(eltype(x))
     @inbounds begin
