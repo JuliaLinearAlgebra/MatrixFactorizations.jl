@@ -21,10 +21,33 @@ squareQ(Q::LinearAlgebra.AbstractQ) = (sq = size(Q.factors, 1); lmul!(Q, Matrix{
 rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
 
 @testset "Compare with QR" begin
-    Q, R = qr(areal[end:-1:1,end:-1:1])
-    Q̃, L = ql(areal)
-    @test R[end:-1:1,end:-1:1] ≈ L
-    @test Q[end:-1:1,end:-1:1] ≈ Q̃
+    n = 10
+    A = randn(n,n)
+    Q̃, R = qr(A[end:-1:1,end:-1:1])
+    Q, L = ql(A)
+    Q̄, L̄ = MatrixFactorizations.generic_qlfactUnblocked!(copy(A))
+    @test Q.factors ≈ Q̄.factors
+    @test Q.τ ≈ Q̄.τ
+    @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
+    @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
+
+    A = randn(n,n+2)
+    Q̃, R = qr(A[end:-1:1,end:-1:1])
+    Q, L = ql(A)
+    Q̄, L̄ = MatrixFactorizations.generic_qlfactUnblocked!(copy(A))
+    @test Q.factors ≈ Q̄.factors
+    @test Q.τ ≈ Q̄.τ
+    @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
+    @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
+
+    A = randn(n+2,n)
+    Q̃, R = qr(A[end:-1:1,end:-1:1])
+    Q, L = ql(A)
+    Q̄, L̄ = MatrixFactorizations.generic_qlfactUnblocked!(copy(A))
+    @test Q.factors ≈ Q̄.factors
+    @test Q.τ ≈ Q̄.τ
+    @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
+    @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
 end
 
 @testset for eltya in (Float32, Float64, ComplexF32, ComplexF64, BigFloat, Int)
