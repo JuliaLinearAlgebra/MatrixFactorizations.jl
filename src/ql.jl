@@ -53,7 +53,7 @@ Base.iterate(S::QL) = (S.Q, Val(:L))
 Base.iterate(S::QL, ::Val{:L}) = (S.L, Val(:done))
 Base.iterate(S::QL, ::Val{:done}) = nothing
 
-function qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
+function generic_qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
     require_one_based_indexing(A)
     m, n = size(A)
     τ = zeros(T, min(m,n))
@@ -66,6 +66,10 @@ function qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
     end
     QL(A, τ)
 end
+
+qlfactUnblocked!(A::AbstractMatrix) = generic_qlfactUnblocked(A)
+qlfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = LAPACK.geqlf!(A)
+
 
 
 # Generic fallbacks
