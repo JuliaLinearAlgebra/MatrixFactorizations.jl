@@ -210,11 +210,14 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::QL)
     show(io, mime, F.L)
 end
 
-@inline function getL(F::QL) 
+@inline function getL(F::QL, _) 
     m, n = size(F)
     tril!(getfield(F, :factors)[end-min(m,n)+1:end, 1:n], max(n-m,0))
 end
-@inline getQ(F::QL) = QLPackedQ(getfield(F, :factors), F.τ)
+@inline getQ(F::QL, _) = QLPackedQ(getfield(F, :factors), F.τ)
+
+getL(F::QL) = getL(F, axes(F.factors))
+getQ(F::QL) = getQ(F, axes(F.factors))
 
 function getproperty(F::QL, d::Symbol)
     if d == :L
