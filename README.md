@@ -37,19 +37,3 @@ L factor:
 julia> b = randn(5); ql(A) \ b ≈ A \ b
 true
 ```
-
-Note that it doesn't use LAPack so may be significantly slower than `qr` for large matrices,
-but is comparable to the Julia native `LinearAlgebra.qrfactUnblocked!`:
-```julia
-julia> A = randn(1_000,1_000);
-
-julia> @time qr!(A);
-  0.024851 seconds (9 allocations: 562.844 KiB)
-
-julia> @time ql!(A);
-  0.416359 seconds (6 allocations: 8.125 KiB)
-
-julia> @time LinearAlgebra.qrfactUnblocked!(A);
-  0.375133 seconds (6 allocations: 8.125 KiB)
-```
-It allocates less memory than `qr!` due to an [implementation issue](https://github.com/JuliaLang/julia/pull/31314).
