@@ -104,6 +104,78 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
             end
         end
     end 
+
+    @testset "transpose errors" begin
+        @test_throws MethodError transpose(qrunblocked(randn(3,3)))
+        @test_throws MethodError adjoint(qrunblocked(randn(3,3)))
+        @test_throws MethodError transpose(qrunblocked(randn(3,3), Val(false)))
+        @test_throws MethodError adjoint(qrunblocked(randn(3,3), Val(false)))
+        @test_throws MethodError transpose(qrunblocked(big.(randn(3,3))))
+        @test_throws MethodError adjoint(qrunblocked(big.(randn(3,3))))
+    end
+
+    @testset "Issue 7304" begin
+        A = [-√.5 -√.5; -√.5 √.5]
+        Q = rectangularQ(qrunblocked(A).Q)
+        @test norm(A-Q) < eps()
+    end
+
+    @testset "qrunblocked on AbstractVector" begin
+        vl = [3.0, 4.0]
+        for Tl in (Float32, Float64)
+            for T in (Tl, Complex{Tl})
+                v = convert(Vector{T}, vl)
+                nv, nm = qrunblocked(v)
+                @test nv*nm ≈ v
+            end
+        end
+    end
+
+    @testset "Issue 24589. Promotion of rational matrices" begin
+        A = rand(1//1:5//5, 4,3)
+        @test first(qrunblocked(A)) == first(qrunblocked(float(A)))
+    end
+
+    @testset "Issue Test Factorization fallbacks for rectangular problems" begin
+        A  = randn(3,2)
+        Ac = copy(A')
+        b  = randn(3)
+        b0 = copy(b)
+        c  = randn(2)
+        @test A \b ≈ ldiv!(c, qrunblocked(A ), b)
+    end
+
+    @testset "Wide QR" begin
+        A = randn(3,5)
+        Q,R = qrunblocked(A)
+        @test Q*R ≈ A
+    end
+
+    @testset "lmul!/rmul!" begin
+        A = randn(100,100)
+        Q,R = qrunblocked(A)
+        x = randn(100)
+        b = randn(100,2)
+        @test lmul!(Q, copy(x)) ≈ Matrix(Q)*x
+        @test lmul!(Q, copy(b)) ≈ Matrix(Q)*b
+        @test lmul!(Q', copy(x)) ≈ Matrix(Q)'*x
+        @test lmul!(Q', copy(b)) ≈ Matrix(Q)'*b
+        c = randn(2,100)
+        @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
+        @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
+
+        A = randn(100,103)
+        Q,R = qrunblocked(A)
+        x = randn(100)
+        b = randn(100,2)
+        @test lmul!(Q, copy(x)) ≈ Matrix(Q)*x
+        @test lmul!(Q, copy(b)) ≈ Matrix(Q)*b
+        @test lmul!(Q', copy(x)) ≈ Matrix(Q)'*x
+        @test lmul!(Q', copy(b)) ≈ Matrix(Q)'*b
+        c = randn(2,100)
+        @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
+        @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
+    end
 end
 
 @testset "QL" begin
