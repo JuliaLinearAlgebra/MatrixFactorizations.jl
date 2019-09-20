@@ -176,6 +176,16 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
         @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
         @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
     end
+
+    @testset "LinearAlgebra.QR -> MatrixFactorizations.QR" begin
+        A = randn(10,10)
+        F̃ = LinearAlgebra.qrfactUnblocked!(copy(A))
+        F = MatrixFactorizations.QR(F̃)
+        Q,R = F
+        @test Q*R ≈ A
+        Q̃,_ = F̃
+        @test MatrixFactorizations.QRPackedQ(Q̃)*R ≈ A
+    end
 end
 
 @testset "QL" begin

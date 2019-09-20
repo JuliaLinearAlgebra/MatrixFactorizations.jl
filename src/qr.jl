@@ -46,9 +46,10 @@ struct QR{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: Factorization{T}
     end
 end
 QR(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = QR{T,typeof(factors), typeof(τ)}(factors, τ)
-function QR{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
+QR{T}(factors::AbstractMatrix, τ::AbstractVector) where {T} =
     QR(convert(AbstractMatrix{T}, factors), convert(AbstractVector{T}, τ))
-end
+
+QR(F::LinearAlgebra.QR) = QR(F.factors, F.τ)
 
 # iteration for destructuring into components
 Base.iterate(S::QR) = (S.Q, Val(:R))
@@ -155,6 +156,8 @@ function QRPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
 end
 
 QRPackedQ{T}(Q::QRPackedQ) where {T} = QRPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
+QRPackedQ(Q::LinearAlgebra.QRPackedQ) = QRPackedQ(Q.factors, Q.τ)
+
 AbstractMatrix{T}(Q::QRPackedQ{T}) where {T} = Q
 AbstractMatrix{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
 
