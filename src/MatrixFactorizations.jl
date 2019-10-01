@@ -8,7 +8,7 @@ import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
             qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular,
             chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
-            QRPackedQ, AbstractQ, _zeros, _cut_B, _ret_size
+            AbstractQ, _zeros, _cut_B, _ret_size
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
                 >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
@@ -29,7 +29,7 @@ else
     import Base: require_one_based_indexing    
 end                            
 
-export ql, ql!, QL                        
+export ql, ql!, qrunblocked, qrunblocked!, QL                        
 
 # Elementary reflection similar to LAPACK. The reflector is not Hermitian but
 # ensures that tridiagonalization of Hermitian matrices become real. See lawn72
@@ -84,7 +84,7 @@ end
     return A
 end
 
-
+include("qr.jl")
 include("ql.jl")
 
 end #module
