@@ -1,7 +1,6 @@
 # MatrixFactorizations.jl
 
 [![Build Status](https://travis-ci.org/JuliaMatrices/MatrixFactorizations.jl.svg?branch=master)](https://travis-ci.org/JuliaMatrices/MatrixFactorizations.jl) 
-[![Build status](https://ci.appveyor.com/api/projects/status/xc5mk54w38u891n7?svg=true)](https://ci.appveyor.com/project/dlfivefifty/matrixfactorizations-jl)
 
 [![codecov](https://codecov.io/gh/JuliaMatrices/MatrixFactorizations.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaMatrices/MatrixFactorizations.jl)
 
