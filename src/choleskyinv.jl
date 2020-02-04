@@ -122,7 +122,7 @@ function choleskyinv!(	P::AbstractMatrix{T};
 			  	 		check::Bool = true,
 						tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
 	P isa Matrix || P isa LowerTriangular || throw(ArgumentError("function choleskyinv!: input matrix must be of the Matrix or LowerTriangular type Call `choleskyinv` instead"))
-	#require_one_based_indexing(P)
+	require_one_based_indexing(P)
 	n = LinearAlgebra.checksquare(P)
 	L₁ 	= LowerTriangular(Matrix{T}(I, n, n))
 	U₁⁻¹= UpperTriangular(Matrix{T}(I, n, n))
