@@ -17,7 +17,7 @@ Base.iterate(Choleskyinv) = (C.c, C.ci)
 
 """
     choleskyinv(P::AbstractMatrix{T};
-		kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:Union{Real, Complex}
+		check::Bool=true, tol::Real = √eps(T)) where T<:Union{Real, Complex}
 
  Compute the Cholesky factorization of a dense positive definite
  matrix P and return a `Choleskyinv` object, holding in field `.c`
@@ -36,7 +36,7 @@ Base.iterate(Choleskyinv) = (C.c, C.ci)
  The algorithm is a *multiplicative Gaussian elimination*.
 
  **Notes:**
- The iverse Cholesky factor ``L^{-1}``, obtained as `.ci.L`,
+ The inverse Cholesky factor ``L^{-1}``, obtained as `.ci.L`,
  is an inverse square root (whitening matrix) of `P`, since
  ``L^{-1}PL^{-H}=I``. It therefore yields the inversion of ``P`` as
  ``P^{-1}=L^{-H}L^{-1}``. This is the fastest whitening matrix to be computed,
@@ -92,16 +92,17 @@ Base.iterate(Choleskyinv) = (C.c, C.ci)
 	@test(norm(C.ci.U*C.ci.L-Yi)/√n < etol)
 
 	# Benchmark
+	using BenchmarkTools
 
 	# computing the Cholesky factor and its inverse using LinearAlgebra
-	function linearAlgebraway(P)
+	function linearAlgebraWay(P)
 		C=cholesky(P)
 		Q=inv(C.L)
 	end
 
 	Y=randP(n)
 	@benchmark(choleskyinv(Y))
-	@benchmark(linearAlgebraway(Y))
+	@benchmark(linearAlgebraWay(Y))
 
 
 """
@@ -115,8 +116,6 @@ choleskyinv(P::AbstractMatrix{T};
     choleskyinv!(P::AbstractMatrix{T};
 		kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:RealOrComplex
  The same thing as [`choleskyinv`](@ref), but destroys the input matrix.
- This function does nt require copying the input matrix,
- thus it is slightly faster.
 """
 function choleskyinv!(	P::AbstractMatrix{T};
 			  	 		check::Bool = true,
