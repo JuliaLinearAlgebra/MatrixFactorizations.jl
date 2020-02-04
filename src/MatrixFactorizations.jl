@@ -35,5 +35,6 @@ export ql, ql!, qrunblocked, qrunblocked!, QL
 
 include("qr.jl")
 include("ql.jl")
+include("choleskyinv.jl")
 
 end #module
