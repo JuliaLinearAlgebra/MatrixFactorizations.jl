@@ -30,7 +30,7 @@ else
     import Base: require_one_based_indexing    
 end                            
 
-export ql, ql!, qrunblocked, qrunblocked!, QL                        
+export ql, ql!, qrunblocked, qrunblocked!, QL, choleskyinv!, choleskyinv                        
 
 
 include("qr.jl")
