@@ -1,32 +1,32 @@
-using LinearAlgebra
+# choleskyinv.jl
+# Cholesky factor and its inverse (complex-conjugate) transposed in one pass.
+# For small matrices this is faster than computing the Cholesky factor
+# using the `cholesky` function in LinearAlgebra and then invert it.
 
-import Base: show, iterate
 
 """
 Cholesky factorization and inverse Cholesky factorization, accessible
-in fields `.c` ans `.ci`, respectively.
+via fields `.c` ans `.ci`, respectively.
 """
-struct Choleskyinv{T<:Factorization}
-    c::T
-	ci::T
+struct CholeskyInv{T, F<:Factorization{T}} <: Factorization{T}
+     c::F
+     ci::F
 end
 
-# iteration for destructuring into components
-Base.iterate(Choleskyinv) = (C.c, C.ci)
-
 
 """
-    choleskyinv(P::AbstractMatrix{T};
-		check::Bool=true, tol::Real = √eps(T)) where T<:Union{Real, Complex}
+choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
+		check::Bool = true,
+   		tol::Real = √eps(real(eltype(P))))
 
  Compute the Cholesky factorization of a dense positive definite
  matrix P and return a `Choleskyinv` object, holding in field `.c`
  the Cholesky factorization and in field `ci` the inverse of the Cholesky
  factorization.
 
- The two factorizations are obtained in one pass and this is faster
+ The two factorizations are obtained in one pass and for small matrices this is faster
  then calling Julia's [chelosky](https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/#LinearAlgebra.cholesky)
- function and inverting the lower factor for small matrices.
+ function and inverting the lower factor.
 
  Input matrix `P` may be of type `Matrix` or `Hermitian`. Since only the
  lower triangle is used, `P` may also be a `LowerTriangular` view of a
@@ -104,47 +104,45 @@ Base.iterate(Choleskyinv) = (C.c, C.ci)
 	@benchmark(choleskyinv(Y))
 	@benchmark(linearAlgebraWay(Y))
 
-
 """
-choleskyinv(P::AbstractMatrix{T};
-	   		check::Bool = true,
-	   		tol::Real = √eps(T)) where T<:Union{Real, Complex} =
-    choleskyinv!(P isa Hermitian || P isa Symmetric ? copy(Matrix(P)) : copy(P);
-			check=check, tol=tol)
+choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
+	   	check::Bool = true,
+	   	tol::Real = √eps(real(eltype(P)))) =
+    choleskyinv!(copy(Matrix(P)); check=check, tol=tol)
+
+
 
 """
     choleskyinv!(P::AbstractMatrix{T};
-		kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:RealOrComplex
+		 kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:RealOrComplex
  The same thing as [`choleskyinv`](@ref), but destroys the input matrix.
 """
-function choleskyinv!(	P::AbstractMatrix{T};
-			  	 		check::Bool = true,
-						tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
-	P isa Matrix || P isa LowerTriangular || throw(ArgumentError("function choleskyinv!: input matrix must be of the Matrix or LowerTriangular type Call `choleskyinv` instead"))
-	require_one_based_indexing(P)
+function choleskyinv!(	P::Matrix{T};
+			check::Bool = true,
+			tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
+	LinearAlgebra.require_one_based_indexing(P)
 	n = LinearAlgebra.checksquare(P)
-	L₁ 	= LowerTriangular(Matrix{T}(I, n, n))
-	U₁⁻¹= UpperTriangular(Matrix{T}(I, n, n))
+	L₁ = LowerTriangular(Matrix{T}(I, n, n))
+	U₁⁻¹ = UpperTriangular(Matrix{T}(I, n, n))
 
-	@inbounds begin
-		for j=1:n-1
-			check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
-			for i=j+1:n
-				θ = conj(P[i, j] / -P[j, j])
-				for k=i:n P[k, i] += θ * P[k, j] end # update A and write D
-				L₁[i, j] = conj(-θ) # write Cholesky factor
-				for k=1:j-1 U₁⁻¹[k, i] += θ * U₁⁻¹[k, j] end # write inv Cholesky factor
-				U₁⁻¹[j, i] = θ # write inv Cholesky factor
-			end
+	@inbounds 
+	for j=1:n-1
+		check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
+		for i=j+1:n
+			θ = conj(P[i, j] / -P[j, j])
+			for k=i:n P[k, i] += θ * P[k, j] end # update A and write D
+			L₁[i, j] = conj(-θ) # write Cholesky factor
+			for k=1:j-1 U₁⁻¹[k, i] += θ * U₁⁻¹[k, j] end # write inv Cholesky factor
+			U₁⁻¹[j, i] = θ # write inv Cholesky factor
 		end
 	end
 
 	D=sqrt.(Diagonal(P))
-	return Choleskyinv(Cholesky(L₁*D, :L, 0), Cholesky(LowerTriangular(Matrix((U₁⁻¹*inv(D))')), :L, 0))
+	return CholeskyInv(Cholesky(L₁*D, :L, 0), Cholesky(LowerTriangular(Matrix((U₁⁻¹*inv(D))')), :L, 0))
 end
 
 
-function show(io::IO, ::MIME{Symbol("text/plain")}, C::Choleskyinv)
+function show(io::IO, ::MIME{Symbol("text/plain")}, C::CholeskyInv)
     println(io, "Cholesky (.c) and inverse Cholesky (.ci) factorizations")
 	#show(io, C.c)
 	#show(io, C.ci)
