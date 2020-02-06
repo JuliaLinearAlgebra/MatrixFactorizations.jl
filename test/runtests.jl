@@ -379,3 +379,30 @@ end
         @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
     end
 end
+
+# choleskyinv.jl
+@testset "choleskyinv" begin
+    etol = 1e-9
+    n = 20
+	# real matrices
+    A = randn(n, n)
+    P = A*A'
+    Pi = inv(P)
+    C = choleskyinv!(copy(Matrix(P)))
+	@test(norm(C.c.L*C.c.U-P)/√n < etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
+    C = choleskyinv(P)
+	@test(norm(C.c.L*C.c.U-P)/√n < etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
+    
+	# repeat the test for complex matrices
+    A=randn(ComplexF64, n, n)
+    P=A*A'
+    Pi=inv(P)
+	C=choleskyinv!(copy(Matrix(P)))
+	@test(norm(C.c.L*C.c.U-P)/√n < etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
+    C = choleskyinv(P)
+	@test(norm(C.c.L*C.c.U-P)/√n < etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
+end
