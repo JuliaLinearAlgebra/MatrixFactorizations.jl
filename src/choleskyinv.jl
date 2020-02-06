@@ -13,6 +13,8 @@ struct CholeskyInv{T, F<:Factorization{T}} <: Factorization{T}
      ci::F
 end
 
+# destructuring
+Base.iterate(C::CholeskyInv) = interate((C.c,C.ci))
 
 """
 choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
