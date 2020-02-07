@@ -1,5 +1,5 @@
 using MatrixFactorizations, LinearAlgebra, Random, Test
-using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!
+using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
 
 n = 10
 
