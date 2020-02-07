@@ -113,29 +113,26 @@ choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
 		kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:RealOrComplex
  The same thing as [`choleskyinv`](@ref), but destroys the input matrix.
 """
-function choleskyinv!(	P::Matrix{T};
-			  	 		check::Bool = true,
-						tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
+function choleskyinv!(P::Matrix{T};
+			check::Bool = true,
+			tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
 	LinearAlgebra.require_one_based_indexing(P)
 	n = LinearAlgebra.checksquare(P)
-	L₁ 	= LowerTriangular(Matrix{T}(I, n, n))
-	U₁⁻¹= UpperTriangular(Matrix{T}(I, n, n))
-
-	@inbounds begin
-		for j=1:n-1
-			check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
-			for i=j+1:n
-				θ = conj(P[i, j] / -P[j, j])
-				for k=i:n P[k, i] += θ * P[k, j] end # update A and write D
-				L₁[i, j] = conj(-θ) # write Cholesky factor
-				for k=1:j-1 U₁⁻¹[k, i] += θ * U₁⁻¹[k, j] end # write inv Cholesky factor
-				U₁⁻¹[j, i] = θ # write inv Cholesky factor
-			end
+	
+	@inbounds for j=1:n-1
+		check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
+		for i=j+1:n
+			θ = conj(P[i, j] / -P[j, j])
+			for k=i:n P[k, i] += θ * P[k, j] end # update P and write D
+			P[i, j] = conj(-θ) # write Cholesky factor
+			for k=1:j-1 P[k, i] += θ * P[k, j] end # write inv Cholesky factor
+			P[j, i] = θ # write inv Cholesky factor
 		end
 	end
 
+	LT, ULT, UUT = LowerTriangular, UnitLowerTriangular, UnitUpperTriangular
 	D=sqrt.(Diagonal(P))
-	return CholeskyInv(Cholesky(L₁*D, :L, 0), Cholesky(LowerTriangular(Matrix((U₁⁻¹*inv(D))')), :L, 0))
+	return CholeskyInv(Cholesky(LT(ULT(P)*D), :L, 0), Cholesky(LT(Matrix((UUT(P)*inv(D))')) , :L, 0 ))
 end
 
 
