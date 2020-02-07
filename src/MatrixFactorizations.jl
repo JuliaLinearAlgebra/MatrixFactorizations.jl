@@ -8,7 +8,7 @@ import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
             qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular,
             chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
-            AbstractQ, _zeros, _cut_B, _ret_size
+            AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
                 >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
