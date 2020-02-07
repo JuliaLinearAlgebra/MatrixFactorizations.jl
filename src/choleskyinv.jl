@@ -6,29 +6,25 @@
 
 """
 Cholesky factorization and inverse Cholesky factorization, accessible
-via fields `.c` ans `.ci`, respectively.
+in fields `.c` ans `.ci`, respectively.
 """
 struct CholeskyInv{T, F<:Factorization{T}} <: Factorization{T}
      c::F
      ci::F
 end
 
-# destructuring
-Base.iterate(C::CholeskyInv) = interate((C.c,C.ci))
-
 """
-choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
-		check::Bool = true,
-   		tol::Real = √eps(real(eltype(P))))
+    choleskyinv(P::AbstractMatrix{T};
+		check::Bool=true, tol::Real = √eps(T)) where T<:Union{Real, Complex}
 
  Compute the Cholesky factorization of a dense positive definite
  matrix P and return a `Choleskyinv` object, holding in field `.c`
  the Cholesky factorization and in field `ci` the inverse of the Cholesky
  factorization.
 
- The two factorizations are obtained in one pass and for small matrices this is faster
+ The two factorizations are obtained in one pass and this is faster
  then calling Julia's [chelosky](https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/#LinearAlgebra.cholesky)
- function and inverting the lower factor.
+ function and inverting the lower factor for small matrices.
 
  Input matrix `P` may be of type `Matrix` or `Hermitian`. Since only the
  lower triangle is used, `P` may also be a `LowerTriangular` view of a
@@ -108,34 +104,33 @@ choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
 
 """
 choleskyinv(P::Union{Hermitian, Symmetric, Matrix, LowerTriangular};
-	   	check::Bool = true,
-	   	tol::Real = √eps(real(eltype(P)))) =
+	   		check::Bool = true,
+	   		tol::Real = √eps(real(eltype(P)))) =
     choleskyinv!(copy(Matrix(P)); check=check, tol=tol)
-
-
 
 """
     choleskyinv!(P::AbstractMatrix{T};
-		 kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:RealOrComplex
+		kind::Symbol = :LLt, tol::Real = √eps(T)) where T<:RealOrComplex
  The same thing as [`choleskyinv`](@ref), but destroys the input matrix.
 """
 function choleskyinv!(	P::Matrix{T};
-			check::Bool = true,
-			tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
+			  	 		check::Bool = true,
+						tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
 	LinearAlgebra.require_one_based_indexing(P)
 	n = LinearAlgebra.checksquare(P)
-	L₁ = LowerTriangular(Matrix{T}(I, n, n))
-	U₁⁻¹ = UpperTriangular(Matrix{T}(I, n, n))
+	L₁ 	= LowerTriangular(Matrix{T}(I, n, n))
+	U₁⁻¹= UpperTriangular(Matrix{T}(I, n, n))
 
-	@inbounds 
-	for j=1:n-1
-		check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
-		for i=j+1:n
-			θ = conj(P[i, j] / -P[j, j])
-			for k=i:n P[k, i] += θ * P[k, j] end # update A and write D
-			L₁[i, j] = conj(-θ) # write Cholesky factor
-			for k=1:j-1 U₁⁻¹[k, i] += θ * U₁⁻¹[k, j] end # write inv Cholesky factor
-			U₁⁻¹[j, i] = θ # write inv Cholesky factor
+	@inbounds begin
+		for j=1:n-1
+			check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
+			for i=j+1:n
+				θ = conj(P[i, j] / -P[j, j])
+				for k=i:n P[k, i] += θ * P[k, j] end # update A and write D
+				L₁[i, j] = conj(-θ) # write Cholesky factor
+				for k=1:j-1 U₁⁻¹[k, i] += θ * U₁⁻¹[k, j] end # write inv Cholesky factor
+				U₁⁻¹[j, i] = θ # write inv Cholesky factor
+			end
 		end
 	end
 
