@@ -112,8 +112,9 @@ Stacktrace:
 [...]
 ```
 """
-ql!(A::AbstractMatrix, ::Val{false}) = qlfactUnblocked!(A)
-ql!(A::AbstractMatrix) = ql!(A, Val(false))
+_ql!(layout, axes, A, ::Val{false}) = qlfactUnblocked!(A)
+_ql!(layout, axes, A) = ql!(A, Val(false))
+ql!(A::AbstractMatrix, args...; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A, args...; kwds...)
 
 _qleltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
 
@@ -175,17 +176,13 @@ julia> F.Q * F.L == A
 true
 ```
 """
-function ql(A::AbstractMatrix{T}, arg) where T
+ql(A::AbstractMatrix) = _ql(MemoryLayout(typeof(A)), axes(A), A)
+
+function _ql(layout, axes, A, args...; kwds...)
     require_one_based_indexing(A)
-    AA = similar(A, _qleltype(T), size(A))
+    AA = similar(A, _qleltype(eltype(A)), size(A))
     copyto!(AA, A)
-    return ql!(AA, arg)
-end
-function ql(A::AbstractMatrix{T}) where T
-    require_one_based_indexing(A)
-    AA = similar(A, _qleltype(T), size(A))
-    copyto!(AA, A)
-    return ql!(AA)
+    return ql!(AA, args...; kwds...)
 end
 ql(x::Number) = ql(fill(x,1,1))
 function ql(v::AbstractVector)
