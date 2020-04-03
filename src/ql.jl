@@ -68,8 +68,8 @@ function generic_qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
 end
 
 
-qlfactUnblocked!(A::AbstractMatrix) = generic_qlfactUnblocked!(A)
-qlfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = QL(LAPACK.geqlf!(A)...)
+@inline qlfactUnblocked!(A::AbstractMatrix) = generic_qlfactUnblocked!(A)
+@inline qlfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = QL(LAPACK.geqlf!(A)...)
 
 
 
@@ -112,11 +112,12 @@ Stacktrace:
 [...]
 ```
 """
-_ql!(layout, axes, A, ::Val{false}) = qlfactUnblocked!(A)
-_ql!(layout, axes, A) = ql!(A, Val(false))
-ql!(A::AbstractMatrix, args...; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A, args...; kwds...)
+@inline _ql!(layout, axes, A, ::Val{false}) = qlfactUnblocked!(A)
+@inline _ql!(layout, axes, A) = ql!(A, Val(false))
+@inline ql!(A::AbstractMatrix; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A; kwds...)
+@inline ql!(A::AbstractMatrix, val; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A, val; kwds...)
 
-_qleltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
+@inline _qleltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
 
 """
     ql(A, pivot=Val(false)) -> F
@@ -176,7 +177,7 @@ julia> F.Q * F.L == A
 true
 ```
 """
-ql(A::AbstractMatrix) = _ql(MemoryLayout(typeof(A)), axes(A), A)
+@inline ql(A::AbstractMatrix, args...; kwds...) = _ql(MemoryLayout(typeof(A)), axes(A), A, args...; kwds...)
 
 function _ql(layout, axes, A, args...; kwds...)
     require_one_based_indexing(A)
@@ -184,10 +185,10 @@ function _ql(layout, axes, A, args...; kwds...)
     copyto!(AA, A)
     return ql!(AA, args...; kwds...)
 end
-ql(x::Number) = ql(fill(x,1,1))
-function ql(v::AbstractVector)
+@inline ql(x::Number, args...; kwds...) = ql(fill(x,1,1), args...; kwds...)
+@inline function ql(v::AbstractVector, args...; kwds...)
     require_one_based_indexing(v)
-    ql(reshape(v, (length(v), 1)))
+    ql(reshape(v, (length(v), 1)), args...; kwds...)
 end
 
 # Conversions

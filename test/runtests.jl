@@ -196,8 +196,8 @@ end
     @testset "Compare with QR" begin
         n = 10
         A = randn(n,n)
-        Q̃, R = qr(A[end:-1:1,end:-1:1])
-        Q, L = ql(A)
+        Q̃, R = @inferred qr(A[end:-1:1,end:-1:1])
+        Q, L = @inferred ql(A)
         Q̄, L̄ = MatrixFactorizations.generic_qlfactUnblocked!(copy(A))
         @test Q.factors ≈ Q̄.factors
         @test Q.τ ≈ Q̄.τ
