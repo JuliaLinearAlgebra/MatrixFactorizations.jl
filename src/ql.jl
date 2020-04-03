@@ -68,8 +68,8 @@ function generic_qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
 end
 
 
-qlfactUnblocked!(A::AbstractMatrix) = generic_qlfactUnblocked!(A)
-qlfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = QL(LAPACK.geqlf!(A)...)
+@inline qlfactUnblocked!(A::AbstractMatrix) = generic_qlfactUnblocked!(A)
+@inline qlfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = QL(LAPACK.geqlf!(A)...)
 
 
 
@@ -112,10 +112,12 @@ Stacktrace:
 [...]
 ```
 """
-ql!(A::AbstractMatrix, ::Val{false}) = qlfactUnblocked!(A)
-ql!(A::AbstractMatrix) = ql!(A, Val(false))
+@inline _ql!(layout, axes, A, ::Val{false}) = qlfactUnblocked!(A)
+@inline _ql!(layout, axes, A) = ql!(A, Val(false))
+@inline ql!(A::AbstractMatrix; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A; kwds...)
+@inline ql!(A::AbstractMatrix, val; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A, val; kwds...)
 
-_qleltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
+@inline _qleltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
 
 """
     ql(A, pivot=Val(false)) -> F
@@ -175,22 +177,18 @@ julia> F.Q * F.L == A
 true
 ```
 """
-function ql(A::AbstractMatrix{T}, arg) where T
+@inline ql(A::AbstractMatrix, args...; kwds...) = _ql(MemoryLayout(typeof(A)), axes(A), A, args...; kwds...)
+
+function _ql(layout, axes, A, args...; kwds...)
     require_one_based_indexing(A)
-    AA = similar(A, _qleltype(T), size(A))
+    AA = similar(A, _qleltype(eltype(A)), size(A))
     copyto!(AA, A)
-    return ql!(AA, arg)
+    return ql!(AA, args...; kwds...)
 end
-function ql(A::AbstractMatrix{T}) where T
-    require_one_based_indexing(A)
-    AA = similar(A, _qleltype(T), size(A))
-    copyto!(AA, A)
-    return ql!(AA)
-end
-ql(x::Number) = ql(fill(x,1,1))
-function ql(v::AbstractVector)
+@inline ql(x::Number, args...; kwds...) = ql(fill(x,1,1), args...; kwds...)
+@inline function ql(v::AbstractVector, args...; kwds...)
     require_one_based_indexing(v)
-    ql(reshape(v, (length(v), 1)))
+    ql(reshape(v, (length(v), 1)), args...; kwds...)
 end
 
 # Conversions
