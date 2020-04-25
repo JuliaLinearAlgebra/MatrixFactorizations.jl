@@ -141,7 +141,7 @@ Base.propertynames(F::QR, private::Bool=false) =
 
 The orthogonal/unitary ``Q`` matrix of a QR factorization stored in [`QR`](@ref).
 """
-struct QRPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: AbstractQ{T}
+struct QRPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: LayoutQ{T}
     factors::S
     τ::Tau
 
@@ -158,6 +158,8 @@ end
 QRPackedQ{T}(Q::QRPackedQ) where {T} = QRPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
 QRPackedQ(Q::LinearAlgebra.QRPackedQ) = QRPackedQ(Q.factors, Q.τ)
 
+
+
 AbstractMatrix{T}(Q::QRPackedQ{T}) where {T} = Q
 AbstractMatrix{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
 
@@ -168,10 +170,20 @@ size(F::QR) = size(getfield(F, :factors))
 
 ## Multiplication by Q
 ### QB
-lmul!(A::QRPackedQ{T,S}, B::StridedVecOrMat{T}) where {T<:BlasFloat, S<:StridedMatrix} =
-    LAPACK.ormqr!('L','N',A.factors,A.τ,B)
 
-function lmul!(A::QRPackedQ, B::AbstractVecOrMat)
+struct QRPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
+struct AdjQRPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
+
+adjointlayout(::Type, ::QRPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQRPackedQLayout{SLAY,TLAY}()
+
+MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} = 
+    QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
+
+materialize!(M::Lmul{<:QRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat = 
+    LAPACK.ormqr!('L','N',M.A.factors,M.A.τ,M.B)    
+
+function materialize!(M::Lmul{<:QRPackedQLayout})
+    A,B = M.A, M.B
     require_one_based_indexing(B)
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
@@ -198,11 +210,12 @@ function lmul!(A::QRPackedQ, B::AbstractVecOrMat)
 end
 
 ### QcB
-lmul!(adjA::Adjoint{<:Any,<:QRPackedQ{T,S,Vector{T}}}, B::StridedVecOrMat{T}) where {T<:BlasReal,S<:StridedMatrix} =
-    (A = adjA.parent; LAPACK.ormqr!('L','T',A.factors,A.τ,B))
-lmul!(adjA::Adjoint{<:Any,<:QRPackedQ{T,S,Vector{T}}}, B::StridedVecOrMat{T}) where {T<:BlasComplex,S<:StridedMatrix} =
-    (A = adjA.parent; LAPACK.ormqr!('L','C',A.factors,A.τ,B))
-function lmul!(adjA::Adjoint{<:Any,<:QRPackedQ}, B::AbstractVecOrMat)
+materialize!(M::Lmul{<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat =
+    (A = M.A.parent; LAPACK.ormqr!('L','T',A.factors,A.τ,M.B))
+materialize!(M::Lmul{<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasComplex = 
+    (A = M.A.parent; LAPACK.ormqr!('L','C',A.factors,A.τ,M.B))
+function materialize!(M::Lmul{<:AdjQRPackedQLayout})
+    adjA,B = M.A, M.B
     require_one_based_indexing(B)
     A = adjA.parent
     mA, nA = size(A.factors)
@@ -230,9 +243,10 @@ function lmul!(adjA::Adjoint{<:Any,<:QRPackedQ}, B::AbstractVecOrMat)
 end
 
 ## AQ
-rmul!(A::StridedVecOrMat{T}, B::QRPackedQ{T,S,Vector{T}}) where {T<:BlasFloat,S<:StridedMatrix} =
-    LAPACK.ormqr!('R', 'N', B.factors, B.τ, A)
-function rmul!(A::AbstractMatrix,Q::QRPackedQ)
+materialize!(M::Rmul{<:AbstractStridedLayout,<:QRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasFloat =
+    LAPACK.ormqr!('R', 'N', M.B.factors, M.B.τ, M.A)
+function materialize!(M::Rmul{<:Any,<:QRPackedQLayout})
+    A,Q = M.A,M.B
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
     if nA != mQ
@@ -258,11 +272,12 @@ function rmul!(A::AbstractMatrix,Q::QRPackedQ)
 end
 
 ### AQc
-rmul!(A::StridedVecOrMat{T}, adjB::Adjoint{<:Any,<:QRPackedQ{T,S,Vector{T}}}) where {T<:BlasReal,S<:StridedMatrix} =
-    (B = adjB.parent; LAPACK.ormqr!('R','T',B.factors,B.τ,A))
-rmul!(A::StridedVecOrMat{T}, adjB::Adjoint{<:Any,<:QRPackedQ{T,S,Vector{T}}}) where {T<:BlasComplex,S<:StridedMatrix} =
-    (B = adjB.parent; LAPACK.ormqr!('R','C',B.factors,B.τ,A))
-function rmul!(A::AbstractMatrix, adjQ::Adjoint{<:Any,<:QRPackedQ})
+materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasReal =
+    (B = adjB.parent; LAPACK.ormqr!('R','T',M.B.factors,M.B.τ,M.A))
+materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasComplex =
+    (B = adjB.parent; LAPACK.ormqr!('R','C',M.B.factors,M.B.τ,M.A))
+function materialize!(M::Rmul{<:Any,<:AdjQRPackedQLayout})
+    A,adjQ = M.A,M.B
     Q = adjQ.parent
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)

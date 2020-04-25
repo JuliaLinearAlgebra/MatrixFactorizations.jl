@@ -236,7 +236,7 @@ Base.propertynames(F::QL, private::Bool=false) =
 
 The orthogonal/unitary ``Q`` matrix of a QL factorization stored in [`QL`](@ref).
 """
-struct QLPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: AbstractQ{T}
+struct QLPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: LayoutQ{T}
     factors::S
     τ::Tau
 
@@ -277,7 +277,18 @@ end
 (*)(A::QLPackedQ, B::StridedMatrix) = _mul(A, B)
 
 ### QB
-function lmul!(A::QLPackedQ, B::AbstractVecOrMat)
+
+struct QLPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
+struct AdjQLPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
+
+adjointlayout(::Type, ::QLPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQLPackedQLayout{SLAY,TLAY}()
+
+MemoryLayout(::Type{<:QLPackedQ{<:Any,S,T}}) where {S,T} = 
+    QLPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
+
+
+function materialize!(M::Lmul{<:QLPackedQLayout})
+    A,B = M.A, M.B
     require_one_based_indexing(B)
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
@@ -305,7 +316,8 @@ function lmul!(A::QLPackedQ, B::AbstractVecOrMat)
 end
 
 
-function lmul!(adjA::Adjoint{<:Any,<:QLPackedQ}, B::AbstractVecOrMat)
+function materialize!(M::Lmul{<:AdjQLPackedQLayout})
+    adjA,B = M.A, M.B
     require_one_based_indexing(B)
     A = adjA.parent
     mA, nA = size(A.factors)
@@ -335,7 +347,8 @@ end
 
 
 ### QBc/QcBc
-function rmul!(A::AbstractMatrix,Q::QLPackedQ)
+function materialize!(M::Rmul{<:Any,<:QLPackedQLayout}) 
+    A,Q = M.A, M.B
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
     if nA != mQ
@@ -362,7 +375,8 @@ function rmul!(A::AbstractMatrix,Q::QLPackedQ)
 end
 
 ### AQc
-function rmul!(A::AbstractMatrix, adjQ::Adjoint{<:Any,<:QLPackedQ})
+function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout}) 
+    A,adjQ = M.A, M.B    
     Q = adjQ.parent
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
