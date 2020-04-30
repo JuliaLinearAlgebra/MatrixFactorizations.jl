@@ -214,6 +214,9 @@ end
 end
 @inline getQ(F::QL, _) = QLPackedQ(getfield(F, :factors), F.τ)
 
+getL(F::QL, ::Tuple{AbstractVector,AbstractVector}) = getL(F, size(F))
+getQ(F::QL, ::Tuple{AbstractVector,AbstractVector}) = getQ(F, size(F))
+
 getL(F::QL) = getL(F, axes(F.factors))
 getQ(F::QL) = getQ(F, axes(F.factors))
 

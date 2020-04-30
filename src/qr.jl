@@ -120,8 +120,12 @@ end
 end
 @inline getQ(F::QR, _) = QRPackedQ(getfield(F, :factors), F.τ)
 
-getR(F::QR) = getR(F, axes(F.factors))
-getQ(F::QR) = getQ(F, axes(F.factors))
+getL(F::QR, ::Tuple{AbstractVector,AbstractVector}) = getL(F, size(F))
+getQ(F::QR, ::Tuple{AbstractVector,AbstractVector}) = getQ(F, size(F))
+
+
+getR(F::QR) = getR(F, size(F.factors))
+getQ(F::QR) = getQ(F, size(F.factors))
 
 function getproperty(F::QR, d::Symbol)
     if d == :R
@@ -178,6 +182,9 @@ adjointlayout(::Type, ::QRPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQRPac
 
 MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} = 
     QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
+MemoryLayout(::Type{<:LinearAlgebra.QRPackedQ{<:Any,S}}) where {S,T} = 
+    QRPackedQLayout{typeof(MemoryLayout(S)),DenseColumnMajor}()
+
 
 materialize!(M::Lmul{<:QRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat = 
     LAPACK.ormqr!('L','N',M.A.factors,M.A.τ,M.B)    
@@ -273,9 +280,9 @@ end
 
 ### AQc
 materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasReal =
-    (B = adjB.parent; LAPACK.ormqr!('R','T',M.B.factors,M.B.τ,M.A))
+    (B = M.B.parent; LAPACK.ormqr!('R','T',B.factors,B.τ,M.A))
 materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasComplex =
-    (B = adjB.parent; LAPACK.ormqr!('R','C',M.B.factors,M.B.τ,M.A))
+    (B = M.B.parent; LAPACK.ormqr!('R','C',B.factors,B.τ,M.A))
 function materialize!(M::Rmul{<:Any,<:AdjQRPackedQLayout})
     A,adjQ = M.A,M.B
     Q = adjQ.parent
