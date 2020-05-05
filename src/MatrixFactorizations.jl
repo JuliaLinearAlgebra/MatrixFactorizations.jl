@@ -22,7 +22,8 @@ import Base: convert, size, view, unsafe_indices,
                             IndexStyle, real, imag, Slice, pointer, unsafe_convert, copyto!
 
 import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_layoutrmul, 
-                     MemoryLayout, adjointlayout, AbstractQLayout
+                     MemoryLayout, adjointlayout, AbstractQLayout, QRPackedQLayout,
+                     QRCompactWYQLayout, QRPackedLayout
 
 
 
