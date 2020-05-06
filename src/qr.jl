@@ -106,6 +106,7 @@ AbstractArray(F::QR) = AbstractMatrix(F)
 Matrix(F::QR) = Array(AbstractArray(F))
 Array(F::QR) = Matrix(F)
 
+
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::QR)
     summary(io, F); println(io)
     println(io, "Q factor:")
@@ -139,6 +140,8 @@ end
 
 Base.propertynames(F::QR, private::Bool=false) =
     (:R, :Q, (private ? fieldnames(typeof(F)) : ())...)
+
+ldiv!(F::QR, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)
 
 """
     QRPackedQ <: AbstractMatrix
@@ -175,211 +178,11 @@ size(F::QR) = size(getfield(F, :factors))
 ## Multiplication by Q
 ### QB
 
-struct QRPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
-struct AdjQRPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
-struct QRCompactWYQLayout{SLAY,TLAY} <: AbstractQLayout end
-struct AdjQRCompactWYQLayout{SLAY,TLAY} <: AbstractQLayout end
-
-
-
-adjointlayout(::Type, ::QRPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQRPackedQLayout{SLAY,TLAY}()
-adjointlayout(::Type, ::QRCompactWYQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQRCompactWYQLayout{SLAY,TLAY}()
-
 MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} = 
     QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
-MemoryLayout(::Type{<:LinearAlgebra.QRPackedQ{<:Any,S}}) where {S,T} = 
-    QRPackedQLayout{typeof(MemoryLayout(S)),DenseColumnMajor}()
-MemoryLayout(::Type{<:LinearAlgebra.QRCompactWYQ{<:Any,S}}) where {S,T} = 
-    QRCompactWYQLayout{typeof(MemoryLayout(S)),DenseColumnMajor}()
 
-
-materialize!(M::Lmul{<:QRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat = 
-    LAPACK.ormqr!('L','N',M.A.factors,M.A.τ,M.B)    
-
-materialize!(M::Lmul{<:QRCompactWYQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat = 
-    LAPACK.gemqrt!('L','N',M.A.factors,M.A.T,M.B)
-
-function materialize!(M::Lmul{<:QRPackedQLayout})
-    A,B = M.A, M.B
-    require_one_based_indexing(B)
-    mA, nA = size(A.factors)
-    mB, nB = size(B,1), size(B,2)
-    if mA != mB
-        throw(DimensionMismatch("matrix A has dimensions ($mA,$nA) but B has dimensions ($mB, $nB)"))
-    end
-    Afactors = A.factors
-    @inbounds begin
-        for k = min(mA,nA):-1:1
-            for j = 1:nB
-                vBj = B[k,j]
-                for i = k+1:mB
-                    vBj += conj(Afactors[i,k])*B[i,j]
-                end
-                vBj = A.τ[k]*vBj
-                B[k,j] -= vBj
-                for i = k+1:mB
-                    B[i,j] -= Afactors[i,k]*vBj
-                end
-            end
-        end
-    end
-    B
-end
-
-
-### QcB
-materialize!(M::Lmul{<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat =
-    (A = M.A.parent; LAPACK.ormqr!('L','T',A.factors,A.τ,M.B))
-materialize!(M::Lmul{<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasComplex = 
-    (A = M.A.parent; LAPACK.ormqr!('L','C',A.factors,A.τ,M.B))
-materialize!(M::Lmul{<:AdjQRCompactWYQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasFloat =
-    (A = M.A.parent; LAPACK.gemqrt!('L','T',A.factors,A.T,M.B))
-materialize!(M::Lmul{<:AdjQRCompactWYQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractStridedLayout,<:AbstractMatrix{T},<:AbstractVecOrMat{T}}) where T<:BlasComplex = 
-    (A = M.A.parent; LAPACK.gemqrt!('L','C',A.factors,A.T,M.B))
-function materialize!(M::Lmul{<:AdjQRPackedQLayout})
-    adjA,B = M.A, M.B
-    require_one_based_indexing(B)
-    A = adjA.parent
-    mA, nA = size(A.factors)
-    mB, nB = size(B,1), size(B,2)
-    if mA != mB
-        throw(DimensionMismatch("matrix A has dimensions ($mA,$nA) but B has dimensions ($mB, $nB)"))
-    end
-    Afactors = A.factors
-    @inbounds begin
-        for k = 1:min(mA,nA)
-            for j = 1:nB
-                vBj = B[k,j]
-                for i = k+1:mB
-                    vBj += conj(Afactors[i,k])*B[i,j]
-                end
-                vBj = conj(A.τ[k])*vBj
-                B[k,j] -= vBj
-                for i = k+1:mB
-                    B[i,j] -= Afactors[i,k]*vBj
-                end
-            end
-        end
-    end
-    B
-end
-
-## AQ
-materialize!(M::Rmul{<:AbstractStridedLayout,<:QRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasFloat =
-    LAPACK.ormqr!('R', 'N', M.B.factors, M.B.τ, M.A)
-materialize!(M::Rmul{<:AbstractStridedLayout,<:QRCompactWYQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasFloat =
-    LAPACK.gemqrt!('R','N', M.B.factors, M.B.T, M.A)
-function materialize!(M::Rmul{<:Any,<:QRPackedQLayout})
-    A,Q = M.A,M.B
-    mQ, nQ = size(Q.factors)
-    mA, nA = size(A,1), size(A,2)
-    if nA != mQ
-        throw(DimensionMismatch("matrix A has dimensions ($mA,$nA) but matrix Q has dimensions ($mQ, $nQ)"))
-    end
-    Qfactors = Q.factors
-    @inbounds begin
-        for k = 1:min(mQ,nQ)
-            for i = 1:mA
-                vAi = A[i,k]
-                for j = k+1:mQ
-                    vAi += A[i,j]*Qfactors[j,k]
-                end
-                vAi = vAi*Q.τ[k]
-                A[i,k] -= vAi
-                for j = k+1:nA
-                    A[i,j] -= vAi*conj(Qfactors[j,k])
-                end
-            end
-        end
-    end
-    A
-end
-
-### AQc
-materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasReal =
-    (B = M.B.parent; LAPACK.ormqr!('R','T',B.factors,B.τ,M.A))
-materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRPackedQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasComplex =
-    (B = M.B.parent; LAPACK.ormqr!('R','C',B.factors,B.τ,M.A))
-materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRCompactWYQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasReal =
-    (B = M.B.parent; LAPACK.gemqrt!('R','T',B.factors,B.T,M.A))
-materialize!(M::Rmul{<:AbstractStridedLayout,<:AdjQRCompactWYQLayout{<:AbstractStridedLayout,<:AbstractStridedLayout},<:AbstractVecOrMat{T},<:AbstractMatrix{T}}) where T<:BlasComplex =
-    (B = M.B.parent; LAPACK.gemqrt!('R','C',B.factors,B.T,M.A))
-function materialize!(M::Rmul{<:Any,<:AdjQRPackedQLayout})
-    A,adjQ = M.A,M.B
-    Q = adjQ.parent
-    mQ, nQ = size(Q.factors)
-    mA, nA = size(A,1), size(A,2)
-    if nA != mQ
-        throw(DimensionMismatch("matrix A has dimensions ($mA,$nA) but matrix Q has dimensions ($mQ, $nQ)"))
-    end
-    Qfactors = Q.factors
-    @inbounds begin
-        for k = min(mQ,nQ):-1:1
-            for i = 1:mA
-                vAi = A[i,k]
-                for j = k+1:mQ
-                    vAi += A[i,j]*Qfactors[j,k]
-                end
-                vAi = vAi*conj(Q.τ[k])
-                A[i,k] -= vAi
-                for j = k+1:nA
-                    A[i,j] -= vAi*conj(Qfactors[j,k])
-                end
-            end
-        end
-    end
-    A
-end
-
-# Julia implementation similar to xgelsy
-function ldiv!(A::QR{T}, B::AbstractMatrix{T}) where T
-    m, n = size(A)
-    minmn = min(m,n)
-    mB, nB = size(B)
-    lmul!(adjoint(A.Q), view(B, 1:m, :))
-    R = A.R
-    @inbounds begin
-        if n > m # minimum norm solution
-            τ = zeros(T,m)
-            for k = m:-1:1 # Trapezoid to triangular by elementary operation
-                x = view(R, k, [k; m + 1:n])
-                τk = reflector!(x)
-                τ[k] = conj(τk)
-                for i = 1:k - 1
-                    vRi = R[i,k]
-                    for j = m + 1:n
-                        vRi += R[i,j]*x[j - m + 1]'
-                    end
-                    vRi *= τk
-                    R[i,k] -= vRi
-                    for j = m + 1:n
-                        R[i,j] -= vRi*x[j - m + 1]
-                    end
-                end
-            end
-        end
-        LinearAlgebra.ldiv!(UpperTriangular(view(R, :, 1:minmn)), view(B, 1:minmn, :))
-        if n > m # Apply elementary transformation to solution
-            B[m + 1:mB,1:nB] .= zero(T)
-            for j = 1:nB
-                for k = 1:m
-                    vBj = B[k,j]
-                    for i = m + 1:n
-                        vBj += B[i,j]*R[k,i]'
-                    end
-                    vBj *= τ[k]
-                    B[k,j] -= vBj
-                    for i = m + 1:n
-                        B[i,j] -= R[k,i]*vBj
-                    end
-                end
-            end
-        end
-    end
-    return B
-end
-ldiv!(A::QR, B::AbstractVector) = ldiv!(A, reshape(B, length(B), 1))[:]
-
+MemoryLayout(::Type{<:QR{<:Any,S,T}}) where {S,T} = 
+    QRPackedLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
 
 function (\)(A::QR{TA}, B::AbstractVecOrMat{TB}) where {TA,TB}
     require_one_based_indexing(B)

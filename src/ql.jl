@@ -280,14 +280,26 @@ end
 (*)(A::QLPackedQ, B::StridedMatrix) = _mul(A, B)
 
 ### QB
+abstract type AbstractQLLayout <: MemoryLayout end
 
+"""
+    QLPackedLayout{SLAY,TLAY}()
+
+represents a Packed QL factorization whose 
+factors are stored with layout SLAY and τ stored with layout TLAY
+"""
+struct QLPackedLayout{SLAY,TLAY} <: AbstractQLLayout end
 struct QLPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
 struct AdjQLPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
 
+MemoryLayout(::Type{<:QL{<:Any,Mat,Tau}}) where {Mat,Tau} = 
+    QLPackedLayout{typeof(MemoryLayout(Mat)),typeof(MemoryLayout(Tau))}()
+
+
 adjointlayout(::Type, ::QLPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQLPackedQLayout{SLAY,TLAY}()
 
-MemoryLayout(::Type{<:QLPackedQ{<:Any,S,T}}) where {S,T} = 
-    QLPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
+MemoryLayout(::Type{<:QLPackedQ{<:Any,Mat,Tau}}) where {Mat,Tau} = 
+    QLPackedQLayout{typeof(MemoryLayout(Mat)),typeof(MemoryLayout(Tau))}()
 
 
 function materialize!(M::Lmul{<:QLPackedQLayout})
@@ -407,11 +419,14 @@ function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout})
 end
 
 # Julia implementation similar to xgelsy
-function ldiv!(A::QL{T}, B::AbstractMatrix{T}) where T
+ldiv!(F::QL, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)
+
+function materialize!(Ldv::Ldiv{<:QLPackedLayout,<:Any,<:Any,<:AbstractMatrix{T}}) where T
+    A,B = Ldv.A,Ldv.B
     m, n = size(A)
     minmn = min(m,n)
     mB, nB = size(B)
-    lmul!(adjoint(A.Q), view(B, 1:m, :))
+    ArrayLayouts.lmul!(adjoint(A.Q), view(B, 1:m, :))
     L = A.L
     @inbounds begin
         if n > m # minimum norm solution
@@ -433,7 +448,7 @@ function ldiv!(A::QL{T}, B::AbstractMatrix{T}) where T
                 end
             end
         end
-        LinearAlgebra.ldiv!(LowerTriangular(view(L, 1:minmn, :)), view(B, 1:minmn, :))
+        ArrayLayouts.ldiv!(LowerTriangular(view(L, 1:minmn, :)), view(B, 1:minmn, :))
         if n > m # Apply elementary transformation to solution
             B[m + 1:mB,1:nB] .= zero(T)
             for j = 1:nB
@@ -453,8 +468,8 @@ function ldiv!(A::QL{T}, B::AbstractMatrix{T}) where T
     end
     return B
 end
-ldiv!(A::QL, B::AbstractVector) = ldiv!(A, reshape(B, length(B), 1))[:]
-
+materialize!(Ldv::Ldiv{<:QLPackedLayout,<:Any,<:Any,<:AbstractVector{T}}) where T =
+    ldiv!(Ldv.A, reshape(Ldv.B, length(Ldv.B), 1))[:]
 
 function (\)(A::QL{TA}, B::AbstractVecOrMat{TB}) where {TA,TB}
     require_one_based_indexing(B)
