@@ -23,7 +23,7 @@ import Base: convert, size, view, unsafe_indices,
 
 import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_layoutrmul, 
                      MemoryLayout, adjointlayout, AbstractQLayout, QRPackedQLayout,
-                     QRCompactWYQLayout, QRPackedLayout
+                     QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout
 
 
 

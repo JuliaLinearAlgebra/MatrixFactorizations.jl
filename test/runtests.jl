@@ -191,20 +191,6 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
         Q̃,_ = F̃
         @test MatrixFactorizations.QRPackedQ(Q̃)*R ≈ A
     end
-
-    @testset "QRCompactWYQ" begin
-        for T in (Float64, ComplexF64)
-            A = randn(T,10,10)
-            b = randn(T,10)
-            B = randn(T,10,10)
-            Q = qr(A).Q
-            @test MemoryLayout(Q) isa QRCompactWYQLayout
-            @test all(materialize!(Lmul(Q,copy(b))) .=== lmul!(Q,copy(b)))
-            @test all(materialize!(Lmul(Q',copy(b))) .=== lmul!(Q',copy(b)))
-            @test all(materialize!(Rmul(copy(B),Q)) .=== rmul!(copy(B),Q))
-            @test all(materialize!(Rmul(copy(B),Q')) .=== rmul!(copy(B),Q'))
-        end
-    end
 end
 
 @testset "QL" begin
