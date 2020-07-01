@@ -6,7 +6,7 @@ import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
 import LinearAlgebra.BLAS: libblas
 import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
-            qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular,
+            qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
             chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
             AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare
 
@@ -38,6 +38,7 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 
+include("ul.jl")
 include("qr.jl")
 include("ql.jl")
 include("choleskyinv.jl")
