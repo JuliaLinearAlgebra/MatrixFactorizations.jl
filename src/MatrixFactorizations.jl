@@ -6,9 +6,10 @@ import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
 import LinearAlgebra.BLAS: libblas
 import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
-            qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
+            qr, axpy!, ldiv!, rdiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
             chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
-            AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare
+            AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare,
+            checknonsingular, ipiv2perm, copytri!, issuccess
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
                 >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
@@ -27,7 +28,7 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
 
 
 
-export ql, ql!, qrunblocked, qrunblocked!, QL, choleskyinv!, choleskyinv
+export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, QL, choleskyinv!, choleskyinv
 
 abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutlmul LayoutQ

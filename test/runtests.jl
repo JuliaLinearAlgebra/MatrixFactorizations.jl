@@ -2,6 +2,9 @@ using MatrixFactorizations, LinearAlgebra, Random, ArrayLayouts, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
 import MatrixFactorizations: QRCompactWYQLayout
 
+
+include("test_ul.jl")
+
 n = 10
 
 # Split n into 2 parts for tests needing two matrices

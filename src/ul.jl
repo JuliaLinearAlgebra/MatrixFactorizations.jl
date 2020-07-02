@@ -76,15 +76,10 @@ Base.iterate(S::UL, ::Val{:done}) = nothing
 adjoint(F::UL) = Adjoint(F)
 transpose(F::UL) = Transpose(F)
 
-# StridedMatrix
-function ul!(A::StridedMatrix{T}, pivot::Union{Val{false}, Val{true}} = Val(true);
+# AbstractMatrix
+function ul!(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}} = Val(true);
              check::Bool = true) where T<:BlasFloat
-    if pivot === Val(false)
-        return generic_ulfact!(A, pivot; check = check)
-    end
-    lpt = LAPACK.getrf!(A)
-    check && checknonsingular(lpt[3])
-    return UL{T,typeof(A)}(lpt[1], lpt[2], lpt[3])
+    return generic_ulfact!(A, pivot; check = check)
 end
 function ul!(A::HermOrSym, pivot::Union{Val{false}, Val{true}} = Val(true); check::Bool = true)
     copytri!(A.data, A.uplo, isa(A, Hermitian))
@@ -128,21 +123,21 @@ Stacktrace:
 [...]
 ```
 """
-ul!(A::StridedMatrix, pivot::Union{Val{false}, Val{true}} = Val(true); check::Bool = true) =
+ul!(A::AbstractMatrix, pivot::Union{Val{false}, Val{true}} = Val(true); check::Bool = true) =
     generic_ulfact!(A, pivot; check = check)
-function generic_ulfact!(A::StridedMatrix{T}, ::Val{Pivot} = Val(true);
+function generic_ulfact!(A::AbstractMatrix{T}, ::Val{Pivot} = Val(true);
                          check::Bool = true) where {T,Pivot}
     m, n = size(A)
     minmn = min(m,n)
     info = 0
     ipiv = Vector{BlasInt}(undef, minmn)
     @inbounds begin
-        for k = 1:minmn
+        for k = minmn:-1:1
             # find index max
             kp = k
             if Pivot
                 amax = abs(zero(T))
-                for i = k:m
+                for i = 1:k
                     absi = abs(A[i,k])
                     if absi > amax
                         kp = i
@@ -162,15 +157,15 @@ function generic_ulfact!(A::StridedMatrix{T}, ::Val{Pivot} = Val(true);
                 end
                 # Scale first coulmn
                 Akkinv = inv(A[k,k])
-                for i = k+1:m
+                for i = 1:k-1
                     A[i,k] *= Akkinv
                 end
             elseif info == 0
                 info = k
             end
             # Update the rest
-            for j = k+1:n
-                for i = k+1:m
+            for j = 1:k-1
+                for i = 1:k-1
                     A[i,j] -= A[i,k]*A[k,j]
                 end
             end
@@ -294,16 +289,16 @@ copy(A::UL{T,S}) where {T,S} = UL{T,S}(copy(A.factors), copy(A.ipiv), A.info)
 size(A::UL)    = size(getfield(A, :factors))
 size(A::UL, i) = size(getfield(A, :factors), i)
 
-function getproperty(F::UL{T,<:StridedMatrix}, d::Symbol) where T
+function getproperty(F::UL{T,<:AbstractMatrix}, d::Symbol) where T
     m, n = size(F)
     if d === :L
-        L = tril!(getfield(F, :factors)[1:m, 1:min(m,n)])
-        for i = 1:min(m,n); L[i,i] = one(T); end
-        return L
+        return tril!(getfield(F, :factors)[1:min(m,n),1:n])
     elseif d === :U
-        return triu!(getfield(F, :factors)[1:min(m,n), 1:n])
+        U = triu!(getfield(F, :factors)[1:m,1:min(m,n)])
+        for i = 1:min(m,n); U[i,i] = one(T); end
+        return U
     elseif d === :p
-        return ipiv2perm(getfield(F, :ipiv), m)
+        return invperm(ipiv2perm(getfield(F, :ipiv), m))
     elseif d === :P
         return Matrix{T}(I, m, m)[:,invperm(F.p)]
     else
@@ -319,19 +314,19 @@ issuccess(F::UL) = F.info == 0
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::UL)
     if issuccess(F)
         summary(io, F); println(io)
-        println(io, "L factor:")
-        show(io, mime, F.L)
-        println(io, "\nU factor:")
+        println(io, "U factor:")
         show(io, mime, F.U)
+        println(io, "\nL factor:")
+        show(io, mime, F.L)
     else
         print(io, "Failed factorization of type $(typeof(F))")
     end
 end
 
-_apply_ipiv_rows!(A::UL, B::StridedVecOrMat) = _ipiv_rows!(A, 1 : length(A.ipiv), B)
-_apply_inverse_ipiv_rows!(A::UL, B::StridedVecOrMat) = _ipiv_rows!(A, length(A.ipiv) : -1 : 1, B)
+_apply_inverse_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, 1 : length(A.ipiv), B)
+_apply_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, length(A.ipiv) : -1 : 1, B)
 
-function _ipiv_rows!(A::UL, order::OrdinalRange, B::StridedVecOrMat)
+function _ipiv_rows!(A::UL, order::OrdinalRange, B::AbstractVecOrMat)
     for i = order
         if i != A.ipiv[i]
             _swap_rows!(B, i, A.ipiv[i])
@@ -340,22 +335,22 @@ function _ipiv_rows!(A::UL, order::OrdinalRange, B::StridedVecOrMat)
     B
 end
 
-function _swap_rows!(B::StridedVector, i::Integer, j::Integer)
+function _swap_rows!(B::AbstractVector, i::Integer, j::Integer)
     B[i], B[j] = B[j], B[i]
     B
 end
 
-function _swap_rows!(B::StridedMatrix, i::Integer, j::Integer)
+function _swap_rows!(B::AbstractMatrix, i::Integer, j::Integer)
     for col = 1 : size(B, 2)
         B[i,col], B[j,col] = B[j,col], B[i,col]
     end
     B
 end
 
-_apply_ipiv_cols!(A::UL, B::StridedVecOrMat) = _ipiv_cols!(A, 1 : length(A.ipiv), B)
-_apply_inverse_ipiv_cols!(A::UL, B::StridedVecOrMat) = _ipiv_cols!(A, length(A.ipiv) : -1 : 1, B)
+_apply_ipiv_cols!(A::UL, B::AbstractVecOrMat) = _ipiv_cols!(A, 1 : length(A.ipiv), B)
+_apply_inverse_ipiv_cols!(A::UL, B::AbstractVecOrMat) = _ipiv_cols!(A, length(A.ipiv) : -1 : 1, B)
 
-function _ipiv_cols!(A::UL, order::OrdinalRange, B::StridedVecOrMat)
+function _ipiv_cols!(A::UL, order::OrdinalRange, B::AbstractVecOrMat)
     for i = order
         if i != A.ipiv[i]
             _swap_cols!(B, i, A.ipiv[i])
@@ -364,45 +359,34 @@ function _ipiv_cols!(A::UL, order::OrdinalRange, B::StridedVecOrMat)
     B
 end
 
-function rdiv!(A::StridedVecOrMat, B::UL{<:Any,<:StridedMatrix})
-    rdiv!(rdiv!(A, UpperTriangular(B.factors)), UnitLowerTriangular(B.factors))
+function rdiv!(A::AbstractVecOrMat, B::UL{<:Any,<:AbstractMatrix})
+    rdiv!(rdiv!(A, LowerTriangular(B.factors)), UnitUpperTriangular(B.factors))
     _apply_inverse_ipiv_cols!(B, A)
 end
 
-ldiv!(A::UL{T,<:StridedMatrix}, B::StridedVecOrMat{T}) where {T<:BlasFloat} =
-    LAPACK.getrs!('N', A.factors, A.ipiv, B)
 
-function ldiv!(A::UL{<:Any,<:StridedMatrix}, B::StridedVecOrMat)
+function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat)
     _apply_ipiv_rows!(A, B)
-    ldiv!(UpperTriangular(A.factors), ldiv!(UnitLowerTriangular(A.factors), B))
+    ldiv!(LowerTriangular(A.factors), ldiv!(UnitUpperTriangular(A.factors), B))
 end
 
-ldiv!(transA::Transpose{T,<:UL{T,<:StridedMatrix}}, B::StridedVecOrMat{T}) where {T<:BlasFloat} =
-    (A = transA.parent; LAPACK.getrs!('T', A.factors, A.ipiv, B))
-
-function ldiv!(transA::Transpose{<:Any,<:UL{<:Any,<:StridedMatrix}}, B::StridedVecOrMat)
+function ldiv!(transA::Transpose{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
     A = transA.parent
-    ldiv!(transpose(UnitLowerTriangular(A.factors)), ldiv!(transpose(UpperTriangular(A.factors)), B))
+    ldiv!(transpose(UnitUpperTriangular(A.factors)), ldiv!(transpose(LowerTriangular(A.factors)), B))
     _apply_inverse_ipiv_rows!(A, B)
 end
 
-ldiv!(adjF::Adjoint{T,<:UL{T,<:StridedMatrix}}, B::StridedVecOrMat{T}) where {T<:Real} =
+ldiv!(adjF::Adjoint{T,<:UL{T,<:AbstractMatrix}}, B::AbstractVecOrMat{T}) where {T<:Real} =
     (F = adjF.parent; ldiv!(transpose(F), B))
-ldiv!(adjA::Adjoint{T,<:UL{T,<:StridedMatrix}}, B::StridedVecOrMat{T}) where {T<:BlasComplex} =
-    (A = adjA.parent; LAPACK.getrs!('C', A.factors, A.ipiv, B))
 
-function ldiv!(adjA::Adjoint{<:Any,<:UL{<:Any,<:StridedMatrix}}, B::StridedVecOrMat)
+function ldiv!(adjA::Adjoint{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
     A = adjA.parent
-    ldiv!(adjoint(UnitLowerTriangular(A.factors)), ldiv!(adjoint(UpperTriangular(A.factors)), B))
+    ldiv!(adjoint(UnitUpperTriangular(A.factors)), ldiv!(adjoint(LowerTriangular(A.factors)), B))
     _apply_inverse_ipiv_rows!(A, B)
 end
 
-(\)(A::Adjoint{<:Any,<:UL}, B::Adjoint{<:Any,<:StridedVecOrMat}) = A \ copy(B)
-(\)(A::Transpose{<:Any,<:UL}, B::Transpose{<:Any,<:StridedVecOrMat}) = A \ copy(B)
-(\)(A::Adjoint{T,<:UL{T,<:StridedMatrix}}, B::Adjoint{T,<:StridedVecOrMat{T}}) where {T<:BlasComplex} =
-    LAPACK.getrs!('C', A.parent.factors, A.parent.ipiv, copy(B))
-(\)(A::Transpose{T,<:UL{T,<:StridedMatrix}}, B::Transpose{T,<:StridedVecOrMat{T}}) where {T<:BlasFloat} =
-    LAPACK.getrs!('T', A.parent.factors, A.parent.ipiv, copy(B))
+(\)(A::Adjoint{<:Any,<:UL}, B::Adjoint{<:Any,<:AbstractVecOrMat}) = A \ copy(B)
+(\)(A::Transpose{<:Any,<:UL}, B::Transpose{<:Any,<:AbstractVecOrMat}) = A \ copy(B)
 
 function (/)(A::AbstractMatrix, F::Adjoint{<:Any,<:UL})
     T = promote_type(eltype(A), eltype(F))
@@ -453,216 +437,214 @@ function logabsdet(F::UL{T}) where T  # return log(abs(det)) and sign(det)
     abs_det, s
 end
 
-inv!(A::UL{<:BlasFloat,<:StridedMatrix}) =
-    LAPACK.getri!(A.factors, A.ipiv)
-inv!(A::UL{T,<:StridedMatrix}) where {T} =
+inv!(A::UL{T,<:AbstractMatrix}) where {T} =
     ldiv!(A.factors, copy(A), Matrix{T}(I, size(A, 1), size(A, 1)))
-inv(A::UL{<:BlasFloat,<:StridedMatrix}) = inv!(copy(A))
+inv(A::UL{<:BlasFloat,<:AbstractMatrix}) = inv!(copy(A))
 
 # Tridiagonal
 
-# See dgttrf.f
-function ul!(A::Tridiagonal{T,V}, pivot::Union{Val{false}, Val{true}} = Val(true);
-             check::Bool = true) where {T,V}
-    n = size(A, 1)
-    info = 0
-    ipiv = Vector{BlasInt}(undef, n)
-    dl = A.dl
-    d = A.d
-    du = A.du
-    if dl === du
-        throw(ArgumentError("off-diagonals of `A` must not alias"))
-    end
-    du2 = fill!(similar(d, n-2), 0)::V
+# # See dgttrf.f
+# function ul!(A::Tridiagonal{T,V}, pivot::Union{Val{false}, Val{true}} = Val(true);
+#              check::Bool = true) where {T,V}
+#     n = size(A, 1)
+#     info = 0
+#     ipiv = Vector{BlasInt}(undef, n)
+#     dl = A.dl
+#     d = A.d
+#     du = A.du
+#     if dl === du
+#         throw(ArgumentError("off-diagonals of `A` must not alias"))
+#     end
+#     dl2 = fill!(similar(d, n-2), 0)::V
 
-    @inbounds begin
-        for i = 1:n
-            ipiv[i] = i
-        end
-        for i = 1:n-2
-            # pivot or not?
-            if pivot === Val(false) || abs(d[i]) >= abs(dl[i])
-                # No interchange
-                if d[i] != 0
-                    fact = dl[i]/d[i]
-                    dl[i] = fact
-                    d[i+1] -= fact*du[i]
-                    du2[i] = 0
-                end
-            else
-                # Interchange
-                fact = d[i]/dl[i]
-                d[i] = dl[i]
-                dl[i] = fact
-                tmp = du[i]
-                du[i] = d[i+1]
-                d[i+1] = tmp - fact*d[i+1]
-                du2[i] = du[i+1]
-                du[i+1] = -fact*du[i+1]
-                ipiv[i] = i+1
-            end
-        end
-        if n > 1
-            i = n-1
-            if pivot === Val(false) || abs(d[i]) >= abs(dl[i])
-                if d[i] != 0
-                    fact = dl[i]/d[i]
-                    dl[i] = fact
-                    d[i+1] -= fact*du[i]
-                end
-            else
-                fact = d[i]/dl[i]
-                d[i] = dl[i]
-                dl[i] = fact
-                tmp = du[i]
-                du[i] = d[i+1]
-                d[i+1] = tmp - fact*d[i+1]
-                ipiv[i] = i+1
-            end
-        end
-        # check for a zero on the diagonal of U
-        for i = 1:n
-            if d[i] == 0
-                info = i
-                break
-            end
-        end
-    end
-    B = Tridiagonal{T,V}(dl, d, du, du2)
-    check && checknonsingular(info, pivot)
-    return UL{T,Tridiagonal{T,V}}(B, ipiv, convert(BlasInt, info))
-end
+#     @inbounds begin
+#         for i = 1:n
+#             ipiv[i] = i
+#         end
+#         for i = n:-1:3
+#             # pivot or not?
+#             if pivot === Val(false) || abs(d[i]) >= abs(dl[i])
+#                 # No interchange
+#                 if d[i] != 0
+#                     fact = du[i-1]/d[i]
+#                     du[i-1] = fact
+#                     d[i-1] -= fact*dl[i-1]
+#                     dl2[i] = 0
+#                 end
+#             else
+#                 # Interchange
+#                 fact = d[i]/du[i-1]
+#                 d[i] = du[i-1]
+#                 du[i-1] = fact
+#                 tmp = dl[i-1]
+#                 dl[i-1] = d[i-1]
+#                 d[i-1] = tmp - fact*d[i-1]
+#                 dl2[i] = dl[i-1]
+#                 dl[i-1] = -fact*dl[i-1]
+#                 ipiv[i] = i-1
+#             end
+#         end
+#         if n > 1
+#             i = 2
+#             if pivot === Val(false) || abs(d[i]) >= abs(dl[i])
+#                 if d[i] != 0
+#                     fact = du[i-1]/d[i]
+#                     du[i-1] = fact
+#                     d[i-1] -= fact*dl[i-1]
+#                 end
+#             else
+#                 fact = d[i]/du[i-1]
+#                 d[i] = du[i-1]
+#                 du[i-1] = fact
+#                 tmp = dl[i-1]
+#                 dl[i-1] = d[i-1]
+#                 d[i-1] = tmp - fact*d[i-1]
+#                 ipiv[i] = i-1
+#             end
+#         end
+#         # check for a zero on the diagonal of U
+#         for i = 1:n
+#             if d[i] == 0
+#                 info = i
+#                 break
+#             end
+#         end
+#     end
+#     B = Tridiagonal{T,V}(dl, d, du, dl2)
+#     check && checknonsingular(info, pivot)
+#     return UL{T,Tridiagonal{T,V}}(B, ipiv, convert(BlasInt, info))
+# end
 
-function getproperty(F::UL{T,Tridiagonal{T,V}}, d::Symbol) where {T,V}
-    m, n = size(F)
-    if d === :L
-        dl = getfield(getfield(F, :factors), :dl)
-        L = Array(Bidiagonal(fill!(similar(dl, n), one(T)), dl, d))
-        for i = 2:n
-            tmp = L[getfield(F, :ipiv)[i], 1:i - 1]
-            L[getfield(F, :ipiv)[i], 1:i - 1] = L[i, 1:i - 1]
-            L[i, 1:i - 1] = tmp
-        end
-        return L
-    elseif d === :U
-        U = Array(Bidiagonal(getfield(getfield(F, :factors), :d), getfield(getfield(F, :factors), :du), d))
-        for i = 1:n - 2
-            U[i,i + 2] = getfield(getfield(F, :factors), :du2)[i]
-        end
-        return U
-    elseif d === :p
-        return ipiv2perm(getfield(F, :ipiv), m)
-    elseif d === :P
-        return Matrix{T}(I, m, m)[:,invperm(F.p)]
-    end
-    return getfield(F, d)
-end
+# function getproperty(F::UL{T,Tridiagonal{T,V}}, d::Symbol) where {T,V}
+#     m, n = size(F)
+#     if d === :U
+#         du = getfield(getfield(F, :factors), :du)
+#         U = Array(Bidiagonal(fill!(similar(du, n), one(T)), du, d))
+#         for i = 2:n
+#             tmp = U[getfield(F, :ipiv)[i], i+1:end]
+#             U[getfield(F, :ipiv)[i], i+1:end] = U[i, i+1:end]
+#             U[i, i+1:end] = tmp
+#         end
+#         return U
+#     elseif d === :L
+#         L = Array(Bidiagonal(getfield(getfield(F, :factors), :d), getfield(getfield(F, :factors), :dl), d))
+#         for i = 1:n - 2
+#             L[i,i + 2] = getfield(getfield(F, :factors), :du2)[i]
+#         end
+#         return L
+#     elseif d === :p
+#         return ipiv2perm(getfield(F, :ipiv), m)
+#     elseif d === :P
+#         return Matrix{T}(I, m, m)[:,invperm(F.p)]
+#     end
+#     return getfield(F, d)
+# end
 
-# See dgtts2.f
-function ldiv!(A::UL{T,Tridiagonal{T,V}}, B::AbstractVecOrMat) where {T,V}
-    require_one_based_indexing(B)
-    n = size(A,1)
-    if n != size(B,1)
-        throw(DimensionMismatch("matrix has dimensions ($n,$n) but right hand side has $(size(B,1)) rows"))
-    end
-    nrhs = size(B,2)
-    dl = A.factors.dl
-    d = A.factors.d
-    du = A.factors.du
-    du2 = A.factors.du2
-    ipiv = A.ipiv
-    @inbounds begin
-        for j = 1:nrhs
-            for i = 1:n-1
-                ip = ipiv[i]
-                tmp = B[i+1-ip+i,j] - dl[i]*B[ip,j]
-                B[i,j] = B[ip,j]
-                B[i+1,j] = tmp
-            end
-            B[n,j] /= d[n]
-            if n > 1
-                B[n-1,j] = (B[n-1,j] - du[n-1]*B[n,j])/d[n-1]
-            end
-            for i = n-2:-1:1
-                B[i,j] = (B[i,j] - du[i]*B[i+1,j] - du2[i]*B[i+2,j])/d[i]
-            end
-        end
-    end
-    return B
-end
+# # See dgtts2.f
+# function ldiv!(A::UL{T,Tridiagonal{T,V}}, B::AbstractVecOrMat) where {T,V}
+#     require_one_based_indexing(B)
+#     n = size(A,1)
+#     if n != size(B,1)
+#         throw(DimensionMismatch("matrix has dimensions ($n,$n) but right hand side has $(size(B,1)) rows"))
+#     end
+#     nrhs = size(B,2)
+#     dl = A.factors.dl
+#     d = A.factors.d
+#     du = A.factors.du
+#     du2 = A.factors.du2
+#     ipiv = A.ipiv
+#     @inbounds begin
+#         for j = 1:nrhs
+#             for i = 1:n-1
+#                 ip = ipiv[i]
+#                 tmp = B[i+1-ip+i,j] - dl[i]*B[ip,j]
+#                 B[i,j] = B[ip,j]
+#                 B[i+1,j] = tmp
+#             end
+#             B[n,j] /= d[n]
+#             if n > 1
+#                 B[n-1,j] = (B[n-1,j] - du[n-1]*B[n,j])/d[n-1]
+#             end
+#             for i = n-2:-1:1
+#                 B[i,j] = (B[i,j] - du[i]*B[i+1,j] - du2[i]*B[i+2,j])/d[i]
+#             end
+#         end
+#     end
+#     return B
+# end
 
-function ldiv!(transA::Transpose{<:Any,<:UL{T,Tridiagonal{T,V}}}, B::AbstractVecOrMat) where {T,V}
-    require_one_based_indexing(B)
-    A = transA.parent
-    n = size(A,1)
-    if n != size(B,1)
-        throw(DimensionMismatch("matrix has dimensions ($n,$n) but right hand side has $(size(B,1)) rows"))
-    end
-    nrhs = size(B,2)
-    dl = A.factors.dl
-    d = A.factors.d
-    du = A.factors.du
-    du2 = A.factors.du2
-    ipiv = A.ipiv
-    @inbounds begin
-        for j = 1:nrhs
-            B[1,j] /= d[1]
-            if n > 1
-                B[2,j] = (B[2,j] - du[1]*B[1,j])/d[2]
-            end
-            for i = 3:n
-                B[i,j] = (B[i,j] - du[i-1]*B[i-1,j] - du2[i-2]*B[i-2,j])/d[i]
-            end
-            for i = n-1:-1:1
-                if ipiv[i] == i
-                    B[i,j] = B[i,j] - dl[i]*B[i+1,j]
-                else
-                    tmp = B[i+1,j]
-                    B[i+1,j] = B[i,j] - dl[i]*tmp
-                    B[i,j] = tmp
-                end
-            end
-        end
-    end
-    return B
-end
+# function ldiv!(transA::Transpose{<:Any,<:UL{T,Tridiagonal{T,V}}}, B::AbstractVecOrMat) where {T,V}
+#     require_one_based_indexing(B)
+#     A = transA.parent
+#     n = size(A,1)
+#     if n != size(B,1)
+#         throw(DimensionMismatch("matrix has dimensions ($n,$n) but right hand side has $(size(B,1)) rows"))
+#     end
+#     nrhs = size(B,2)
+#     dl = A.factors.dl
+#     d = A.factors.d
+#     du = A.factors.du
+#     du2 = A.factors.du2
+#     ipiv = A.ipiv
+#     @inbounds begin
+#         for j = 1:nrhs
+#             B[1,j] /= d[1]
+#             if n > 1
+#                 B[2,j] = (B[2,j] - du[1]*B[1,j])/d[2]
+#             end
+#             for i = 3:n
+#                 B[i,j] = (B[i,j] - du[i-1]*B[i-1,j] - du2[i-2]*B[i-2,j])/d[i]
+#             end
+#             for i = n-1:-1:1
+#                 if ipiv[i] == i
+#                     B[i,j] = B[i,j] - dl[i]*B[i+1,j]
+#                 else
+#                     tmp = B[i+1,j]
+#                     B[i+1,j] = B[i,j] - dl[i]*tmp
+#                     B[i,j] = tmp
+#                 end
+#             end
+#         end
+#     end
+#     return B
+# end
 
-# Ac_ldiv_B!(A::UL{T,Tridiagonal{T}}, B::AbstractVecOrMat) where {T<:Real} = At_ldiv_B!(A,B)
-function ldiv!(adjA::Adjoint{<:Any,UL{T,Tridiagonal{T,V}}}, B::AbstractVecOrMat) where {T,V}
-    require_one_based_indexing(B)
-    A = adjA.parent
-    n = size(A,1)
-    if n != size(B,1)
-        throw(DimensionMismatch("matrix has dimensions ($n,$n) but right hand side has $(size(B,1)) rows"))
-    end
-    nrhs = size(B,2)
-    dl = A.factors.dl
-    d = A.factors.d
-    du = A.factors.du
-    du2 = A.factors.du2
-    ipiv = A.ipiv
-    @inbounds begin
-        for j = 1:nrhs
-            B[1,j] /= conj(d[1])
-            if n > 1
-                B[2,j] = (B[2,j] - conj(du[1])*B[1,j])/conj(d[2])
-            end
-            for i = 3:n
-                B[i,j] = (B[i,j] - conj(du[i-1])*B[i-1,j] - conj(du2[i-2])*B[i-2,j])/conj(d[i])
-            end
-            for i = n-1:-1:1
-                if ipiv[i] == i
-                    B[i,j] = B[i,j] - conj(dl[i])*B[i+1,j]
-                else
-                    tmp = B[i+1,j]
-                    B[i+1,j] = B[i,j] - conj(dl[i])*tmp
-                    B[i,j] = tmp
-                end
-            end
-        end
-    end
-    return B
-end
+# # Ac_ldiv_B!(A::UL{T,Tridiagonal{T}}, B::AbstractVecOrMat) where {T<:Real} = At_ldiv_B!(A,B)
+# function ldiv!(adjA::Adjoint{<:Any,UL{T,Tridiagonal{T,V}}}, B::AbstractVecOrMat) where {T,V}
+#     require_one_based_indexing(B)
+#     A = adjA.parent
+#     n = size(A,1)
+#     if n != size(B,1)
+#         throw(DimensionMismatch("matrix has dimensions ($n,$n) but right hand side has $(size(B,1)) rows"))
+#     end
+#     nrhs = size(B,2)
+#     dl = A.factors.dl
+#     d = A.factors.d
+#     du = A.factors.du
+#     du2 = A.factors.du2
+#     ipiv = A.ipiv
+#     @inbounds begin
+#         for j = 1:nrhs
+#             B[1,j] /= conj(d[1])
+#             if n > 1
+#                 B[2,j] = (B[2,j] - conj(du[1])*B[1,j])/conj(d[2])
+#             end
+#             for i = 3:n
+#                 B[i,j] = (B[i,j] - conj(du[i-1])*B[i-1,j] - conj(du2[i-2])*B[i-2,j])/conj(d[i])
+#             end
+#             for i = n-1:-1:1
+#                 if ipiv[i] == i
+#                     B[i,j] = B[i,j] - conj(dl[i])*B[i+1,j]
+#                 else
+#                     tmp = B[i+1,j]
+#                     B[i+1,j] = B[i,j] - conj(dl[i])*tmp
+#                     B[i,j] = tmp
+#                 end
+#             end
+#         end
+#     end
+#     return B
+# end
 
 rdiv!(B::AbstractMatrix, A::UL) = transpose(ldiv!(transpose(A), transpose(B)))
 rdiv!(B::AbstractMatrix, A::Transpose{<:Any,<:UL}) = transpose(ldiv!(A.parent, transpose(B)))
@@ -674,41 +656,41 @@ AbstractArray(F::UL) = AbstractMatrix(F)
 Matrix(F::UL) = Array(AbstractArray(F))
 Array(F::UL) = Matrix(F)
 
-function Tridiagonal(F::UL{T,Tridiagonal{T,V}}) where {T,V}
-    n = size(F, 1)
+# function Tridiagonal(F::UL{T,Tridiagonal{T,V}}) where {T,V}
+#     n = size(F, 1)
 
-    dl  = copy(F.factors.dl)
-    d   = copy(F.factors.d)
-    du  = copy(F.factors.du)
-    du2 = copy(F.factors.du2)
+#     dl  = copy(F.factors.dl)
+#     d   = copy(F.factors.d)
+#     du  = copy(F.factors.du)
+#     du2 = copy(F.factors.du2)
 
-    for i = n - 1:-1:1
-        li         = dl[i]
-        dl[i]      = li*d[i]
-        d[i + 1]  += li*du[i]
-        if i < n - 1
-            du[i + 1] += li*du2[i]
-        end
+#     for i = n - 1:-1:1
+#         li         = dl[i]
+#         dl[i]      = li*d[i]
+#         d[i + 1]  += li*du[i]
+#         if i < n - 1
+#             du[i + 1] += li*du2[i]
+#         end
 
-        if F.ipiv[i] != i
-            tmp   = dl[i]
-            dl[i] = d[i]
-            d[i]  = tmp
+#         if F.ipiv[i] != i
+#             tmp   = dl[i]
+#             dl[i] = d[i]
+#             d[i]  = tmp
 
-            tmp      = d[i + 1]
-            d[i + 1] = du[i]
-            du[i]    = tmp
+#             tmp      = d[i + 1]
+#             d[i + 1] = du[i]
+#             du[i]    = tmp
 
-            if i < n - 1
-                tmp       = du[i + 1]
-                du[i + 1] = du2[i]
-                du2[i]    = tmp
-            end
-        end
-    end
-    return Tridiagonal(dl, d, du)
-end
-AbstractMatrix(F::UL{T,Tridiagonal{T,V}}) where {T,V} = Tridiagonal(F)
-AbstractArray(F::UL{T,Tridiagonal{T,V}}) where {T,V} = AbstractMatrix(F)
-Matrix(F::UL{T,Tridiagonal{T,V}}) where {T,V} = Array(AbstractArray(F))
-Array(F::UL{T,Tridiagonal{T,V}}) where {T,V} = Matrix(F)
+#             if i < n - 1
+#                 tmp       = du[i + 1]
+#                 du[i + 1] = du2[i]
+#                 du2[i]    = tmp
+#             end
+#         end
+#     end
+#     return Tridiagonal(dl, d, du)
+# end
+# AbstractMatrix(F::UL{T,Tridiagonal{T,V}}) where {T,V} = Tridiagonal(F)
+# AbstractArray(F::UL{T,Tridiagonal{T,V}}) where {T,V} = AbstractMatrix(F)
+# Matrix(F::UL{T,Tridiagonal{T,V}}) where {T,V} = Array(AbstractArray(F))
+# Array(F::UL{T,Tridiagonal{T,V}}) where {T,V} = Matrix(F)
