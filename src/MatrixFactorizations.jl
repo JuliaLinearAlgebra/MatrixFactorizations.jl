@@ -28,7 +28,7 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
 
 
 
-export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, QL, choleskyinv!, choleskyinv
+export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, choleskyinv!, choleskyinv
 
 abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutlmul LayoutQ

@@ -48,24 +48,31 @@ julia> l == F.L && u == F.U && p == F.p
 true
 ```
 """
-struct UL{T,S<:AbstractMatrix{T}} <: Factorization{T}
+struct UL{T,S<:AbstractMatrix{T},IPIV<:AbstractVector{<:Integer}} <: Factorization{T}
     factors::S
-    ipiv::Vector{BlasInt}
+    ipiv::IPIV
     info::BlasInt
 
-    function UL{T,S}(factors, ipiv, info) where {T,S<:AbstractMatrix{T}}
+    function UL{T,S,IPIV}(factors, ipiv, info) where {T,S<:AbstractMatrix{T},IPIV<:AbstractVector{<:Integer}}
         require_one_based_indexing(factors)
-        new{T,S}(factors, ipiv, info)
+        new{T,S,IPIV}(factors, ipiv, info)
     end
 end
-function UL(factors::AbstractMatrix{T}, ipiv::Vector{BlasInt}, info::BlasInt) where {T}
-    UL{T,typeof(factors)}(factors, ipiv, info)
+function UL(factors::AbstractMatrix{T}, ipiv::AbstractVector{<:Integer}, info::Integer) where {T}
+    UL{T,typeof(factors),typeof(ipiv)}(factors, ipiv, BlasInt(info))
 end
 function UL{T}(factors::AbstractMatrix, ipiv::AbstractVector{<:Integer}, info::Integer) where {T}
     UL(convert(AbstractMatrix{T}, factors),
-       convert(Vector{BlasInt}, ipiv),
-       BlasInt(info))
+       ipiv,
+       info)
 end
+
+function UL{T,S}(factors::AbstractMatrix, ipiv::AbstractVector{<:Integer}, info::Integer) where {T,S<:AbstractMatrix{T}}
+    UL(convert(S, factors),
+       ipiv,
+       info)
+end
+
 
 # iteration for destructuring into components
 Base.iterate(S::UL) = (S.U, Val(:L))
@@ -102,7 +109,7 @@ julia> A = [4. 3.; 6. 3.]
  6.0  3.0
 
 julia> F = ul!(A)
-UL{Float64,Array{Float64,2}}
+UL{Float64,Array{Float64,2},Vector{Int}}
 L factor:
 2×2 Array{Float64,2}:
  1.0       0.0
@@ -172,7 +179,7 @@ function generic_ulfact!(A::AbstractMatrix{T}, ::Val{Pivot} = Val(true);
         end
     end
     check && checknonsingular(info, Val{Pivot}())
-    return UL{T,typeof(A)}(A, ipiv, convert(BlasInt, info))
+    return UL{T}(A, ipiv, convert(BlasInt, info))
 end
 
 function ultype(T::Type)
@@ -244,7 +251,7 @@ julia> A = [4 3; 6 3]
  6  3
 
 julia> F = ul(A)
-UL{Float64,Array{Float64,2}}
+UL{Float64,Array{Float64,2},Vector{Int}}
 L factor:
 2×2 Array{Float64,2}:
  1.0       0.0
@@ -263,11 +270,14 @@ julia> l == F.L && u == F.U && p == F.p
 true
 ```
 """
-function ul(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true);
+function _ul(layout, A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true);
             check::Bool = true) where T
     S = ultype(T)
     ul!(copy_oftype(A, S), pivot; check = check)
 end
+
+ul(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true); check::Bool = true) where T = 
+    _ul(MemoryLayout(A), A, pivot; check=check)
 
 ul(S::UL) = S
 function ul(x::Number; check::Bool=true)
@@ -289,14 +299,26 @@ copy(A::UL{T,S}) where {T,S} = UL{T,S}(copy(A.factors), copy(A.ipiv), A.info)
 size(A::UL)    = size(getfield(A, :factors))
 size(A::UL, i) = size(getfield(A, :factors), i)
 
+getU(F::UL) = getU(F, size(F.factors))
+function getU(F::UL, _)
+    m, n = size(F)
+    U = triu!(getfield(F, :factors)[1:m,1:min(m,n)])
+    for i = 1:min(m,n); U[i,i] = one(T); end
+    return U
+end
+
+getL(F::UL) = getL(F, size(F.factors))
+function getL(F::UL, _) 
+    m, n = size(F)
+    tril!(getfield(F, :factors)[1:min(m,n),1:n])
+end
+
 function getproperty(F::UL{T,<:AbstractMatrix}, d::Symbol) where T
     m, n = size(F)
     if d === :L
-        return tril!(getfield(F, :factors)[1:min(m,n),1:n])
+        return getL(F)
     elseif d === :U
-        U = triu!(getfield(F, :factors)[1:m,1:min(m,n)])
-        for i = 1:min(m,n); U[i,i] = one(T); end
-        return U
+        return getU(F)
     elseif d === :p
         return invperm(ipiv2perm(getfield(F, :ipiv), m))
     elseif d === :P
