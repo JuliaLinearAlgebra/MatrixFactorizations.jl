@@ -300,7 +300,7 @@ size(A::UL)    = size(getfield(A, :factors))
 size(A::UL, i) = size(getfield(A, :factors), i)
 
 getU(F::UL) = getU(F, size(F.factors))
-function getU(F::UL, _)
+function getU(F::UL{T}, _) where T
     m, n = size(F)
     U = triu!(getfield(F, :factors)[1:m,1:min(m,n)])
     for i = 1:min(m,n); U[i,i] = one(T); end

@@ -261,7 +261,7 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
             show(bf, "text/plain", ul(Matrix(I, 4, 4)))
             seekstart(bf)
             @test String(take!(bf)) == """
-MatrixFactorizations.UL{Float64,Array{Float64,2}}
+UL{Float64,Array{Float64,2},Array{Int64,1}}
 U factor:
 4×4 Array{Float64,2}:
  1.0  0.0  0.0  0.0
