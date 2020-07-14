@@ -6,9 +6,10 @@ import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
 import LinearAlgebra.BLAS: libblas
 import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
-            qr, axpy!, ldiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular,
-            chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, logabsdet,
-            AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare
+            qr, axpy!, ldiv!, rdiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
+            chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
+            AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare,
+            checknonsingular, ipiv2perm, copytri!, issuccess
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
                 >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
@@ -27,7 +28,7 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
 
 
 
-export ql, ql!, qrunblocked, qrunblocked!, QL, choleskyinv!, choleskyinv
+export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, choleskyinv!, choleskyinv
 
 abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutlmul LayoutQ
@@ -38,6 +39,7 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 
+include("ul.jl")
 include("qr.jl")
 include("ql.jl")
 include("choleskyinv.jl")
