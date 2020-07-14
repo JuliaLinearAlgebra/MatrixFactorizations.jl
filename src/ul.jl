@@ -401,11 +401,11 @@ end
 (/)(adjA::Adjoint{<:Any,<:AbstractMatrix}, F::Adjoint{<:Any,<:UL}) = adjoint(F.parent \ adjA.parent)
 function (/)(trA::Transpose{<:Any,<:AbstractVector}, F::Adjoint{<:Any,<:UL})
     T = promote_type(eltype(trA), eltype(F))
-    return adjoint(ldiv!(F.parent, convert(AbstractVector{T}, conj!(copy(trA.parent)))))
+    return adjoint(ldiv!(F.parent, conj!(AbstractVector{T}(trA.parent))))
 end
 function (/)(trA::Transpose{<:Any,<:AbstractMatrix}, F::Adjoint{<:Any,<:UL})
     T = promote_type(eltype(trA), eltype(F))
-    return adjoint(ldiv!(F.parent, convert(AbstractMatrix{T}, conj!(copy(trA.parent)))))
+    return adjoint(ldiv!(F.parent, conj!(AbstractMatrix{T}(trA.parent))))
 end
 
 function det(F::UL{T}) where T
