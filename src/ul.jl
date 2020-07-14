@@ -369,24 +369,6 @@ function _swap_rows!(B::AbstractMatrix, i::Integer, j::Integer)
     B
 end
 
-_apply_ipiv_cols!(A::UL, B::AbstractVecOrMat) = _ipiv_cols!(A, 1 : length(A.ipiv), B)
-_apply_inverse_ipiv_cols!(A::UL, B::AbstractVecOrMat) = _ipiv_cols!(A, length(A.ipiv) : -1 : 1, B)
-
-function _ipiv_cols!(A::UL, order::OrdinalRange, B::AbstractVecOrMat)
-    for i = order
-        if i != A.ipiv[i]
-            _swap_cols!(B, i, A.ipiv[i])
-        end
-    end
-    B
-end
-
-function rdiv!(A::AbstractVecOrMat, B::UL{<:Any,<:AbstractMatrix})
-    rdiv!(rdiv!(A, LowerTriangular(B.factors)), UnitUpperTriangular(B.factors))
-    _apply_inverse_ipiv_cols!(B, A)
-end
-
-
 function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat)
     _apply_ipiv_rows!(A, B)
     ldiv!(LowerTriangular(A.factors), ldiv!(UnitUpperTriangular(A.factors), B))
@@ -419,11 +401,11 @@ end
 (/)(adjA::Adjoint{<:Any,<:AbstractMatrix}, F::Adjoint{<:Any,<:UL}) = adjoint(F.parent \ adjA.parent)
 function (/)(trA::Transpose{<:Any,<:AbstractVector}, F::Adjoint{<:Any,<:UL})
     T = promote_type(eltype(trA), eltype(F))
-    return adjoint(ldiv!(F.parent, convert(AbstractVector{T}, conj(trA.parent))))
+    return adjoint(ldiv!(F.parent, convert(AbstractVector{T}, conj!(copy(trA.parent)))))
 end
 function (/)(trA::Transpose{<:Any,<:AbstractMatrix}, F::Adjoint{<:Any,<:UL})
     T = promote_type(eltype(trA), eltype(F))
-    return adjoint(ldiv!(F.parent, convert(AbstractMatrix{T}, conj(trA.parent))))
+    return adjoint(ldiv!(F.parent, convert(AbstractMatrix{T}, conj!(copy(trA.parent)))))
 end
 
 function det(F::UL{T}) where T

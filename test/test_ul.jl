@@ -323,21 +323,22 @@ L factor:
         for elty in (Float16, Float64, ComplexF64), transform in (transpose, adjoint)
             A = randn(elty, 5, 5)
             B = randn(elty, 5, 5)
-            @test ldiv!(transform(ul(A)), copy(B)) ≈ transform(A) \ B
-            @test ldiv!(transform(ul(A)), transform(copy(B))) ≈ transform(A) \ transform(B)
+            @test ldiv!(transform(ul(A)), copy(B)) ≈ transform(ul(A)) \ B ≈ transform(A) \ B
+            @test ldiv!(transform(ul(A)), transform(copy(B))) ≈ transform(ul(A)) \ transform(B) ≈ transform(A) \ transform(B)
         end
     end
 
     @testset "more rdiv! methods" begin
         A = randn(5,5)
         B = randn(5,5)
+        a = randn(5)
         @test rdiv!(copy(A), ul(B)) ≈ A / B
 
         for elty in (Float16, Float64, ComplexF64), transform in (transpose, adjoint)
             A = randn(elty, 5, 5)
             C = copy(A)
             B = randn(elty, 5, 5)
-            @test rdiv!(transform(A), transform(ul(B))) ≈ transform(C) / transform(B)
+            @test rdiv!(transform(A), transform(ul(B))) ≈ transform(C) / transform(ul(B)) ≈ transform(C) / transform(B)
         end
     end
 
