@@ -88,10 +88,10 @@ function ul!(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}} = Val(tru
              check::Bool = true) where T<:BlasFloat
     return generic_ulfact!(A, pivot; check = check)
 end
-function ul!(A::HermOrSym, pivot::Union{Val{false}, Val{true}} = Val(true); check::Bool = true)
-    copytri!(A.data, A.uplo, isa(A, Hermitian))
-    ul!(A.data, pivot; check = check)
-end
+# function ul!(A::HermOrSym, pivot::Union{Val{false}, Val{true}} = Val(true); check::Bool = true)
+#     copytri!(A.data, A.uplo, isa(A, Hermitian))
+#     ul!(A.data, pivot; check = check)
+# end
 
 """
     ul!(A, pivot=Val(true); check = true) -> UL

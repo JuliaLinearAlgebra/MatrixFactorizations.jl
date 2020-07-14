@@ -319,12 +319,45 @@ L factor:
         @test F.p == []
     end
 
+    @testset "more ldiv! methods" begin
+        for elty in (Float16, Float64, ComplexF64), transform in (transpose, adjoint)
+            A = randn(elty, 5, 5)
+            B = randn(elty, 5, 5)
+            @test ldiv!(transform(ul(A)), copy(B)) ≈ transform(A) \ B
+            @test ldiv!(transform(ul(A)), transform(copy(B))) ≈ transform(A) \ transform(B)
+        end
+    end
+
     @testset "more rdiv! methods" begin
+        A = randn(5,5)
+        B = randn(5,5)
+        @test rdiv!(copy(A), ul(B)) ≈ A / B
+
         for elty in (Float16, Float64, ComplexF64), transform in (transpose, adjoint)
             A = randn(elty, 5, 5)
             C = copy(A)
             B = randn(elty, 5, 5)
             @test rdiv!(transform(A), transform(ul(B))) ≈ transform(C) / transform(B)
         end
+    end
+
+    @testset "conversions" begin
+        A = randn(5,5)
+        F = ul(A)
+        @test ul(F) ≡ F ≡ Factorization{Float64}(F)
+        @test UL{Float32}(F).factors ≈ UL{Float32,Matrix{Float32}}(F).factors ≈
+                Factorization{Float32}(F).factors ≈ ul(Float32.(A)).factors
+        @test copy(F).factors == F.factors
+    end
+
+    @testset "det" begin
+        A = randn(5,5)
+        @test det(A) ≈ det(ul(A))
+        @test all(logabsdet(A) .≈ logabsdet(ul(A)))
+    end
+
+    @testset "inv" begin
+        A = randn(5,5)
+        @test inv(ul(A)) ≈ inv(A)
     end
 end
