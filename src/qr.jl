@@ -141,8 +141,8 @@ end
 Base.propertynames(F::QR, private::Bool=false) =
     (:R, :Q, (private ? fieldnames(typeof(F)) : ())...)
 
-ldiv!(F::QR, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)
-ldiv!(F::QR, B::LayoutVector) = ArrayLayouts.ldiv!(F, B)
+LinearAlgebra.ldiv!(F::QR, B::AbstractVecOrMat) = ldiv!(F, B)
+LinearAlgebra.ldiv!(F::QR, B::LayoutVector) = ldiv!(F, B)
 
 """
     QRPackedQ <: AbstractMatrix

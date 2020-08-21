@@ -37,6 +37,8 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
         @test (L*U) ≈ A[p,:] # for context
         P = lu(A).P
         @test P'*L*U ≈ A
+
+        @test ul([1 4 ; 2 1.]) \ [1,2] ≈ [1,0]
     end
 
     @testset for eltya in (Float32, Float64, ComplexF32, ComplexF64, BigFloat, Int)
@@ -360,5 +362,11 @@ L factor:
     @testset "inv" begin
         A = randn(5,5)
         @test inv(ul(A)) ≈ inv(A)
+    end
+
+    @testset "ambiguity" begin
+        A = randn(5,5)
+        b = MyVector(randn(5))
+        ul(A) \ b
     end
 end

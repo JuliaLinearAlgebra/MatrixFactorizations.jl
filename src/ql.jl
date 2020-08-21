@@ -419,14 +419,14 @@ function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout})
 end
 
 # Julia implementation similar to xgelsy
-ldiv!(F::QL, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)
+LinearAlgebra.ldiv!(F::QL, B::AbstractVecOrMat) = ldiv!(F, B)
 
 function materialize!(Ldv::Ldiv{<:QLPackedLayout,<:Any,<:Any,<:AbstractMatrix{T}}) where T
     A,B = Ldv.A,Ldv.B
     m, n = size(A)
     minmn = min(m,n)
     mB, nB = size(B)
-    ArrayLayouts.lmul!(adjoint(A.Q), view(B, 1:m, :))
+    lmul!(adjoint(A.Q), view(B, 1:m, :))
     L = A.L
     @inbounds begin
         if n > m # minimum norm solution
@@ -448,7 +448,7 @@ function materialize!(Ldv::Ldiv{<:QLPackedLayout,<:Any,<:Any,<:AbstractMatrix{T}
                 end
             end
         end
-        ArrayLayouts.ldiv!(LowerTriangular(view(L, 1:minmn, :)), view(B, 1:minmn, :))
+        ldiv!(LowerTriangular(view(L, 1:minmn, :)), view(B, 1:minmn, :))
         if n > m # Apply elementary transformation to solution
             B[m + 1:mB,1:nB] .= zero(T)
             for j = 1:nB

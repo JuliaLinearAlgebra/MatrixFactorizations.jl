@@ -6,8 +6,8 @@ import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
 import LinearAlgebra.BLAS: libblas
 import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
-            qr, axpy!, ldiv!, rdiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
-            chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
+            qr, axpy!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
+            chkstride1, kron, factorize, StructuredMatrixStyle, det, logabsdet,
             AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare,
             checknonsingular, ipiv2perm, copytri!, issuccess
 
@@ -24,7 +24,8 @@ import Base: convert, size, view, unsafe_indices,
 
 import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_layoutrmul, 
                      MemoryLayout, adjointlayout, AbstractQLayout, QRPackedQLayout,
-                     QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout
+                     QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout,
+                     ldiv!, rdiv!, lmul!, rmul!
 
 
 

@@ -345,8 +345,10 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::UL)
     end
 end
 
-_apply_inverse_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, 1 : length(A.ipiv), B)
-_apply_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, length(A.ipiv) : -1 : 1, B)
+_apply_inverse_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, axes(A.ipiv,1), B)
+_apply_ipiv_rows!(A::UL, ipiv, B::AbstractVecOrMat) = _ipiv_rows!(A, reverse(axes(ipiv,1)), B)
+_apply_ipiv_rows!(A::UL, ::AbstractUnitRange, B::AbstractVecOrMat) = B
+_apply_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _apply_ipiv_rows!(A, A.ipiv, B)
 
 function _ipiv_rows!(A::UL, order::OrdinalRange, B::AbstractVecOrMat)
     for i = order
@@ -369,7 +371,17 @@ function _swap_rows!(B::AbstractMatrix, i::Integer, j::Integer)
     B
 end
 
+LinearAlgebra.ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat) = ldiv!(A, B)
+LinearAlgebra.ldiv!(A::Transpose{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat) = ldiv!(A, B)
+LinearAlgebra.ldiv!(A::Adjoint{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat) = ldiv!(A, B)
+
+
 function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat)
+    _apply_ipiv_rows!(A, B)
+    ldiv!(LowerTriangular(A.factors), ldiv!(UnitUpperTriangular(A.factors), B))
+end
+
+function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutVector)
     _apply_ipiv_rows!(A, B)
     ldiv!(LowerTriangular(A.factors), ldiv!(UnitUpperTriangular(A.factors), B))
 end
@@ -649,6 +661,10 @@ inv(A::UL{<:BlasFloat,<:AbstractMatrix}) = inv!(copy(A))
 #     end
 #     return B
 # end
+
+LinearAlgebra.rdiv!(B::AbstractMatrix, A::UL) = rdiv!(B, A)
+LinearAlgebra.rdiv!(B::AbstractMatrix, A::Transpose{<:Any,<:UL}) = rdiv!(B, A)
+LinearAlgebra.rdiv!(B::AbstractMatrix, A::Adjoint{<:Any,<:UL}) = rdiv!(B, A)
 
 rdiv!(B::AbstractMatrix, A::UL) = transpose(ldiv!(transpose(A), transpose(B)))
 rdiv!(B::AbstractMatrix, A::Transpose{<:Any,<:UL}) = transpose(ldiv!(A.parent, transpose(B)))
