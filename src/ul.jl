@@ -378,6 +378,7 @@ function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat)
 end
 
 ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutVector) = Base.invoke(ldiv!, Tuple{UL{<:Any,<:AbstractMatrix},AbstractVecOrMat}, A, B)
+ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutMatrix) = Base.invoke(ldiv!, Tuple{UL{<:Any,<:AbstractMatrix},AbstractVecOrMat}, A, B)
 
 function ldiv!(transA::Transpose{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
     A = transA.parent

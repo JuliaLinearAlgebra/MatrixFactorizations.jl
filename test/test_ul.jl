@@ -14,8 +14,8 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
 
     areal = randn(n,n)/2
     aimg  = randn(n,n)/2
-    breal = randn(n,2)/2
     bimg  = randn(n,2)/2
+    breal = randn(n,2)/2
     creal = randn(n)/2
     cimg  = randn(n)/2
     dureal = randn(n-1)/2
@@ -360,5 +360,17 @@ L factor:
     @testset "inv" begin
         A = randn(5,5)
         @test inv(ul(A)) ≈ inv(A)
+    end
+
+    @testset "MyVector/MyMatrix" begin
+        A = randn(5,5)
+        b = randn(5)
+        B = randn(5,3)
+        b̃ = MyVector(copy(b))
+        B̃ = MyMatrix(copy(B))
+        @test ldiv!(ul(A), b̃) === b̃
+        @test b̃ ≈ A \ b
+        @test ldiv!(ul(A), B̃) === B̃
+        @test B̃ ≈ A \ B
     end
 end
