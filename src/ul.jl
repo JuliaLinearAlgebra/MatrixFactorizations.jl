@@ -345,8 +345,11 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::UL)
     end
 end
 
-_apply_inverse_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, 1 : length(A.ipiv), B)
-_apply_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, length(A.ipiv) : -1 : 1, B)
+_apply_inverse_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _ipiv_rows!(A, axes(A.ipiv,1), B)
+_apply_ipiv_rows!(A::UL, ipiv, B::AbstractVecOrMat) = _ipiv_rows!(A, reverse(axes(ipiv,1)), B)
+_apply_ipiv_rows!(A::UL, ::AbstractUnitRange, B::AbstractVecOrMat) = B
+_apply_ipiv_rows!(A::UL, B::AbstractVecOrMat) = _apply_ipiv_rows!(A, A.ipiv, B)
+
 
 function _ipiv_rows!(A::UL, order::OrdinalRange, B::AbstractVecOrMat)
     for i = order
@@ -371,12 +374,15 @@ end
 
 function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat)
     _apply_ipiv_rows!(A, B)
-    ldiv!(LowerTriangular(A.factors), ldiv!(UnitUpperTriangular(A.factors), B))
+    ArrayLayouts.ldiv!(LowerTriangular(A.factors), ArrayLayouts.ldiv!(UnitUpperTriangular(A.factors), B))
 end
+
+ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutVector) = Base.invoke(ldiv!, Tuple{UL{<:Any,<:AbstractMatrix},AbstractVecOrMat}, A, B)
+ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutMatrix) = Base.invoke(ldiv!, Tuple{UL{<:Any,<:AbstractMatrix},AbstractVecOrMat}, A, B)
 
 function ldiv!(transA::Transpose{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
     A = transA.parent
-    ldiv!(transpose(UnitUpperTriangular(A.factors)), ldiv!(transpose(LowerTriangular(A.factors)), B))
+    ArrayLayouts.ldiv!(transpose(UnitUpperTriangular(A.factors)), ArrayLayouts.ldiv!(transpose(LowerTriangular(A.factors)), B))
     _apply_inverse_ipiv_rows!(A, B)
 end
 
@@ -385,7 +391,7 @@ ldiv!(adjF::Adjoint{T,<:UL{T,<:AbstractMatrix}}, B::AbstractVecOrMat{T}) where {
 
 function ldiv!(adjA::Adjoint{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
     A = adjA.parent
-    ldiv!(adjoint(UnitUpperTriangular(A.factors)), ldiv!(adjoint(LowerTriangular(A.factors)), B))
+    ArrayLayouts.ldiv!(adjoint(UnitUpperTriangular(A.factors)), ArrayLayouts.ldiv!(adjoint(LowerTriangular(A.factors)), B))
     _apply_inverse_ipiv_rows!(A, B)
 end
 

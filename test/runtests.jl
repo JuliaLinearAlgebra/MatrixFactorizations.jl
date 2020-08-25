@@ -2,6 +2,17 @@ using MatrixFactorizations, LinearAlgebra, Random, ArrayLayouts, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
 import MatrixFactorizations: QRCompactWYQLayout
 
+struct MyMatrix <: LayoutMatrix{Float64}
+    A::Matrix{Float64}
+end
+
+Base.getindex(A::MyMatrix, k::Int, j::Int) = A.A[k,j]
+Base.setindex!(A::MyMatrix, v, k::Int, j::Int) = setindex!(A.A, v, k, j)
+Base.size(A::MyMatrix) = size(A.A)
+Base.strides(A::MyMatrix) = strides(A.A)
+Base.unsafe_convert(::Type{Ptr{T}}, A::MyMatrix) where T = Base.unsafe_convert(Ptr{T}, A.A)
+MemoryLayout(::Type{MyMatrix}) = DenseColumnMajor()
+
 struct MyVector <: LayoutVector{Float64}
     A::Vector{Float64}
 end
@@ -12,6 +23,7 @@ Base.size(A::MyVector) = size(A.A)
 Base.strides(A::MyVector) = strides(A.A)
 Base.unsafe_convert(::Type{Ptr{T}}, A::MyVector) where T = Base.unsafe_convert(Ptr{T}, A.A)
 MemoryLayout(::Type{MyVector}) = DenseColumnMajor()
+
 
 include("test_ul.jl")
 
@@ -208,8 +220,10 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
     @testset "Ambiguity" begin
         A = randn(10,10)
         b = rand(10)
+        B = randn(10,3)
         F = qrunblocked(A)
         @test ldiv!(F, MyVector(copy(b))) ≈ A \ b
+        @test ldiv!(F, MyMatrix(copy(B))) ≈ A \ B
     end
 end
 

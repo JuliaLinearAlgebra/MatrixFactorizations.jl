@@ -115,7 +115,7 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::QR)
     show(io, mime, F.R)
 end
 
-@inline function getR(F::QR, _) 
+@inline function getR(F::QR, _)
     m, n = size(F)
     triu!(getfield(F, :factors)[1:min(m,n), 1:n])
 end
@@ -143,6 +143,8 @@ Base.propertynames(F::QR, private::Bool=false) =
 
 ldiv!(F::QR, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)
 ldiv!(F::QR, B::LayoutVector) = ArrayLayouts.ldiv!(F, B)
+ldiv!(F::QR, B::LayoutMatrix) = ArrayLayouts.ldiv!(F, B)
+
 
 """
     QRPackedQ <: AbstractMatrix
@@ -179,10 +181,10 @@ size(F::QR) = size(getfield(F, :factors))
 ## Multiplication by Q
 ### QB
 
-MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} = 
+MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} =
     QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
 
-MemoryLayout(::Type{<:QR{<:Any,S,T}}) where {S,T} = 
+MemoryLayout(::Type{<:QR{<:Any,S,T}}) where {S,T} =
     QRPackedLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
 
 function (\)(A::QR{TA}, B::AbstractVecOrMat{TB}) where {TA,TB}
