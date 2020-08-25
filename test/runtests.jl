@@ -2,6 +2,19 @@ using MatrixFactorizations, LinearAlgebra, Random, ArrayLayouts, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
 import MatrixFactorizations: QRCompactWYQLayout
 
+struct MyVector <: LayoutVector{Float64}
+    A::Vector{Float64}
+end
+
+Base.getindex(A::MyVector, k::Int) = A.A[k]
+Base.setindex!(A::MyVector, v, k::Int) = setindex!(A.A, v, k)
+Base.size(A::MyVector) = size(A.A)
+Base.strides(A::MyVector) = strides(A.A)
+Base.unsafe_convert(::Type{Ptr{T}}, A::MyVector) where T = Base.unsafe_convert(Ptr{T}, A.A)
+MemoryLayout(::Type{MyVector}) = DenseColumnMajor()
+
+include("test_ul.jl")
+
 n = 10
 
 # Split n into 2 parts for tests needing two matrices
@@ -190,6 +203,13 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
         @test Q*R ≈ A
         Q̃,_ = F̃
         @test MatrixFactorizations.QRPackedQ(Q̃)*R ≈ A
+    end
+
+    @testset "Ambiguity" begin
+        A = randn(10,10)
+        b = rand(10)
+        F = qrunblocked(A)
+        @test ldiv!(F, MyVector(copy(b))) ≈ A \ b
     end
 end
 
