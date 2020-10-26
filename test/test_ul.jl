@@ -373,4 +373,16 @@ L factor:
         @test ldiv!(ul(A), B̃) === B̃
         @test B̃ ≈ A \ B
     end
+
+    @testset "Tridiagonal" begin
+        n = 10
+        A = Tridiagonal(randn(n-1), randn(n), randn(n-1))+10I
+        U,L = ul(A, Val(false))
+        @test U isa Bidiagonal
+        @test L isa Bidiagonal
+        Ũ,L̃ = ul(Matrix(A), Val(false))
+        @test U ≈ Ũ
+        @test L ≈ L̃
+        @test U*L ≈ A
+    end
 end

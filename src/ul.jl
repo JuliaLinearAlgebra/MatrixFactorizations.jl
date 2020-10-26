@@ -302,7 +302,7 @@ size(A::UL, i) = size(getfield(A, :factors), i)
 getU(F::UL) = getU(F, size(F.factors))
 function getU(F::UL{T}, _) where T
     m, n = size(F)
-    U = triu!(getfield(F, :factors)[1:m,1:min(m,n)])
+    U = triu!(layout_getindex(getfield(F, :factors),1:m,1:min(m,n)))
     for i = 1:min(m,n); U[i,i] = one(T); end
     return U
 end
@@ -310,7 +310,7 @@ end
 getL(F::UL) = getL(F, size(F.factors))
 function getL(F::UL, _) 
     m, n = size(F)
-    tril!(getfield(F, :factors)[1:min(m,n),1:n])
+    tril!(layout_getindex(getfield(F, :factors),1:min(m,n),1:n))
 end
 
 function getproperty(F::UL{T,<:AbstractMatrix}, d::Symbol) where T
@@ -524,6 +524,21 @@ inv(A::UL{<:BlasFloat,<:AbstractMatrix}) = inv!(copy(A))
 #     check && checknonsingular(info, pivot)
 #     return UL{T,Tridiagonal{T,V}}(B, ipiv, convert(BlasInt, info))
 # end
+
+
+function getU(F::UL{T,<:Tridiagonal}, _) where T
+    m, n = size(F)
+    @assert m == n
+    data = getfield(F, :factors)
+    Bidiagonal(ones(T,m), copy(data.du), :U)
+end
+function getL(F::UL{T,<:Tridiagonal}, _) where T
+    m, n = size(F)
+    @assert m == n
+    data = getfield(F, :factors)
+    Bidiagonal(copy(data.d), copy(data.dl), :L)
+end
+
 
 # function getproperty(F::UL{T,Tridiagonal{T,V}}, d::Symbol) where {T,V}
 #     m, n = size(F)
