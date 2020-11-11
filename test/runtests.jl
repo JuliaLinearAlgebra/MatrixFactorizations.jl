@@ -24,7 +24,6 @@ Base.strides(A::MyVector) = strides(A.A)
 Base.unsafe_convert(::Type{Ptr{T}}, A::MyVector) where T = Base.unsafe_convert(Ptr{T}, A.A)
 MemoryLayout(::Type{MyVector}) = DenseColumnMajor()
 
-
 include("test_ul.jl")
 
 n = 10
@@ -437,3 +436,6 @@ end
 	@test(norm(C.c.L*C.c.U-P)/√n < etol)
 	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
 end
+
+
+include("test_polar.jl")
