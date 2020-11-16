@@ -43,5 +43,6 @@ include("ul.jl")
 include("qr.jl")
 include("ql.jl")
 include("choleskyinv.jl")
+include("polar.jl")
 
 end #module
