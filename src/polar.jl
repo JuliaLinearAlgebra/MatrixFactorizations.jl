@@ -96,7 +96,7 @@ end
 function evaluate_objv(preU::Matrix{T}, U::Matrix{T}) where {T}
     rel = opnorm(preU - U, Inf) / opnorm(preU, Inf)
     abs = opnorm(I - U'*U, Inf)
-    return Objective{T}(rel, abs)
+    return Objective(rel, abs)
 end
 
 
@@ -272,17 +272,17 @@ mutable struct NewtonAlg{T,RT<:Real} <: PolarAlg
     function NewtonAlg{T}( ;maxiter::Integer=100,
                        verbose::Bool=false,
                        scale::Bool=true,
-                       tol::Real=cbrt(eps(real(T))),
-                       scale_tol::Real=eps(real(T))^(1/4)) where T
+                       tol::RT=cbrt(eps(real(T))),
+                       scale_tol::Real=eps(real(T))^(1/4)) where {T,RT<:Real}
         maxiter > 1 || error("maxiter must be greater than 1.")
         tol > 0 || error("tol must be positive.")
         scale_tol > 0 || error("scale_tol must be positive.")
 
-        new{T,real(T)}(maxiter,
+        new{T,RT}(maxiter,
             scale,
             verbose,
             tol,
-            scale_tol)
+            RT(scale_tol))
     end
 end
 
@@ -317,7 +317,7 @@ end
 
 
 """
-     Polar.NewtonSchultzAlg{T} <: Polar.PolarAlg
+     Polar.NewtonSchulzAlg{T} <: Polar.PolarAlg
 
  Newton-Schulz algorithm for polar decomposition
 
@@ -327,18 +327,18 @@ Reference:
 [3] Günther Schulz, Iterative Berechnung der reziproken Matrix, Z. Angew.
 Math. Mech.,13:57-59, (1933) pp. 114, 181.
 """
-mutable struct NewtonSchulzAlg{T} <: PolarAlg
+mutable struct NewtonSchulzAlg{T,RT} <: PolarAlg
     maxiter::Int     # maximum number of iterations.
     verbose::Bool    # whether to show procedural information
-    tol::T     # convergence tolerance.
+    tol::RT     # convergence tolerance.
 
     function NewtonSchulzAlg{T}(; maxiter::Integer=100,
                              verbose::Bool=false,
-                             tol::Real=cbrt(eps(real(T)))) where T
+                             tol::RT=cbrt(eps(real(T)))) where {T,RT<:Real}
         maxiter > 1 || error("maxiter must be greater than 1.")
         tol > 0 || error("tol must be positive.")
 
-        new{T}(int(maxiter),
+        new{T,RT}(Int(maxiter),
             verbose,
             tol)
     end
@@ -348,7 +348,10 @@ function solve!(alg::NewtonSchulzAlg,
                    X::Matrix{T}, U::Matrix{T}, H::Matrix{T}) where {T}
 
     # Newton Schulz converge quadratically if norm(X) < sqrt(3)
-    opnorm(X) < convert(T, sqrt(3)) || throw(ArgumentError("The norm of the input matrix must be smaller than sqrt(3)."))
+
+    # Revisor's note: this test makes the implementation pointless,
+    # since opnorm does an SVD.
+    # opnorm(X) < convert(real(T), sqrt(3)) || throw(ArgumentError("The norm of the input matrix must be smaller than sqrt(3)."))
 
     common_iter!(NewtonSchulzUpdater(), X, U, H, alg.maxiter, alg.verbose, alg.tol)
 end
@@ -398,11 +401,11 @@ mutable struct HalleyAlg{T,RT} <: PolarAlg
 
     function HalleyAlg{T}( ;maxiter::Integer=100,
                        verbose::Bool=false,
-                       tol::Real = cbrt(eps(T))) where T
+                       tol::RT = cbrt(eps(T))) where {T,RT<:Real}
         maxiter > 1 || error("maxiter must be greater than 1.")
         tol > 0 || error("tol must be positive.")
 
-        new{T,real(T)}(maxiter,
+        new{T,RT}(maxiter,
             verbose,
             tol)
     end
@@ -446,11 +449,11 @@ mutable struct QDWHAlg{T,RT} <: PolarAlg
     function QDWHAlg{T}( ;maxiter::Integer=100,
                      verbose::Bool=false,
                      piv::Bool=true,
-                     tol::Real=cbrt(eps(T))) where T
+                     tol::RT=cbrt(eps(T))) where {T,RT<:Real}
         maxiter > 1 || error("maxiter must be greater than 1.")
         tol > 0 || error("tol must be positive.")
 
-        new{T,real(T)}(maxiter,
+        new{T,RT}(maxiter,
             verbose,
             piv,
             tol)
@@ -537,13 +540,13 @@ mutable struct NewtonHybridAlg{T,RT<:Real} <: PolarAlg
 
     function NewtonHybridAlg{T}( ; maxiter::Integer=100,
                              verbose::Bool=false,
-                             tol::Real=cbrt(eps(real(T))),
-                             theta::Real=convert(real(T), 0.6)) where T
+                             tol::RT=cbrt(eps(real(T))),
+                             theta::RT=convert(real(T), 0.6)) where {T,RT<:Real}
         maxiter > 1 || error("maxiter must  be greater than 1.")
         tol > 0 || error("tol must be positive.")
         theta > 0 || error("theta must be positive.")
 
-        new{T,real(T)}(maxiter,
+        new{T,RT}(maxiter,
             verbose,
             tol,
             theta)
@@ -586,6 +589,7 @@ end
 function polar(A::AbstractMatrix{T}, algorithm::Polar.PolarAlg) where {T}
     # Initialization: if m > n, do QR factorization
     m, n = size(A)
+    mm = m
     if m > n
         if Polar.isiterative(algorithm)
             m = n
@@ -593,11 +597,15 @@ function polar(A::AbstractMatrix{T}, algorithm::Polar.PolarAlg) where {T}
             A = F.R
         end
     elseif m < n
-        error("The row dimension of the input matrix must be
-              greater or equal to column dimension.")
+        throw(ArgumentError("The row dimension of the input matrix must be
+              greater or equal to column dimension."))
     end
     U = Array{T}(undef, m, n)
     H = Array{T}(undef, n, n)
     # solve for polar factors
-    Polar.solve!(algorithm, A, U, H)
+    r = Polar.solve!(algorithm, A, U, H)
+    if mm > m
+        return PolarDecomposition{T}(F.Q * r.U, r.H, r.niters, r.converged)
+    end
+    return r
 end

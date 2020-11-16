@@ -23,7 +23,23 @@ for T in [Float64, Complex{Float64}]
             r = polar(A, alg = :newton)
             @test U == r.U
             @test H == r.H
+
+            r = polar(A, alg = :newton, verbose = true)
+            @test U == r.U
+            @test H == r.H
+
+            m = n + 2
+            A = rand(T,m,n)
+            U,H = polar(A, alg = :newton)
+            @test U'*U ≈ Matrix(I,n,n) atol=1e-7
+            @test ishermitian(H)
+            for i in eigvals(H)
+                @test i >= 0.
+            end
+            @test A ≈ U*H
         end
+        A = rand(T,5,7)
+        @test_throws ArgumentError U,H = polar(A, alg = :newton)
     end
 end
 
@@ -63,6 +79,24 @@ for T in [Float64, Complex{Float64}]
             m = n + rand(0:5)
             A = rand(T, m, n)
             U,H = polar(A, alg = :svd)
+            @test U'*U ≈ Matrix(I,n,n) atol=1e-7
+            @test ishermitian(H)
+            for i in eigvals(H)
+                @test i >= 0.
+            end
+            @test A ≈ U*H
+        end
+    end
+end
+
+for T in [Float64, Complex{Float64}]
+    @testset "Newton-Schulz $T" begin
+        for n in [1,3,10]
+            m = n
+            A = rand(T, m, n)
+            nA = opnorm(A)
+            A = (1.5 / nA) * A
+            U,H = polar(A, alg = :schulz)
             @test U'*U ≈ Matrix(I,n,n) atol=1e-7
             @test ishermitian(H)
             for i in eigvals(H)
