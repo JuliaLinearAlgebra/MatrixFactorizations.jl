@@ -1,12 +1,14 @@
 # MatrixFactorizations.jl
 
-[![Build Status](https://travis-ci.org/JuliaMatrices/MatrixFactorizations.jl.svg?branch=master)](https://travis-ci.org/JuliaMatrices/MatrixFactorizations.jl) 
+[![Build Status](https://travis-ci.com/JuliaMatrices/MatrixFactorizations.jl.svg?branch=master)](https://travis-ci.com/JuliaMatrices/MatrixFactorizations.jl)
 
 [![codecov](https://codecov.io/gh/JuliaMatrices/MatrixFactorizations.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaMatrices/MatrixFactorizations.jl)
 
-A Julia package to contain non-standard matrix factorizations. At the moment it 
-implements the QL factorization, though in the future may include other factorizations such 
-as the UL, LQ, and RQ factorizations.
+A Julia package to contain non-standard matrix factorizations. At the moment it
+implements the QL and UL factorizations, a combined Cholesky factorization with inverse,
+and polar decompositions.
+In the future it may include other factorizations such
+as the LQ and RQ factorizations.
 
 ## QL Factorization
 
