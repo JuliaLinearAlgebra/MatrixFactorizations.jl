@@ -410,6 +410,8 @@ end
     end
 end
 
+include("test_rq.jl")
+
 # choleskyinv.jl
 @testset "choleskyinv" begin
     etol = 1e-9

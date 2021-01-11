@@ -5,10 +5,10 @@
 [![codecov](https://codecov.io/gh/JuliaMatrices/MatrixFactorizations.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaMatrices/MatrixFactorizations.jl)
 
 A Julia package to contain non-standard matrix factorizations. At the moment it
-implements the QL and UL factorizations, a combined Cholesky factorization with inverse,
+implements the QL, RQ, and UL factorizations, a combined Cholesky factorization with inverse,
 and polar decompositions.
 In the future it may include other factorizations such
-as the LQ and RQ factorizations.
+as the LQ factorization.
 
 ## QL Factorization
 

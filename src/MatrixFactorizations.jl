@@ -42,6 +42,7 @@ axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 include("ul.jl")
 include("qr.jl")
 include("ql.jl")
+include("rq.jl")
 include("choleskyinv.jl")
 include("polar.jl")
 
