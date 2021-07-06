@@ -433,10 +433,10 @@ include("test_rq.jl")
     Pi=inv(P)
 	C=choleskyinv!(copy(Matrix(P)))
 	@test(norm(C.c.L*C.c.U-P)/√n < etol)
-	@test(norm(C.ci.U*C.ci.L-Pi)/√n < 2etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < 4etol)
     C = choleskyinv(P)
 	@test(norm(C.c.L*C.c.U-P)/√n < etol)
-	@test(norm(C.ci.U*C.ci.L-Pi)/√n < 2etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < 4etol)
 end
 
 
