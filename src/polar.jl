@@ -487,6 +487,10 @@ mutable struct QDWHUpdater{T} <: PolarUpdater
 end
 
 
+if VERSION < v"1.7-"
+    ColumnNorm() = Val(true)
+end
+
 function update_U!(upd::QDWHUpdater, U::Matrix{T}) where {T}
     piv = upd.piv
     L = upd.L
@@ -512,7 +516,7 @@ function update_U!(upd::QDWHUpdater, U::Matrix{T}) where {T}
 
     copyto!(B, [sqrt(c)*U; Matrix(one(T)*I,n,n)])
     if piv
-        F = qr(B, Val(true))
+        F = qr(B, ColumnNorm())
     else
         F = qr(B)
     end

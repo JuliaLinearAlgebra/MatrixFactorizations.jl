@@ -80,7 +80,7 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
                     @test squareQ(q)'q ≈ Matrix(I, a_1, a_1)
                     @test Matrix(1.0I, a_1, a_1)'q' ≈ squareQ(q)'
                     @test q*r ≈ a
-                    @test a*(qra\b) ≈ b atol=3000ε
+                    @test a*(qra\b) ≈ b atol=5000ε
                     @test Array(qra) ≈ a
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * squareQ(q) ≈ Matrix(I, sq, sq) atol=5000ε
@@ -287,7 +287,7 @@ end
                     @test squareQ(q)'q ≈ Matrix(I, a_1, a_1)
                     @test Matrix(1.0I, a_1, a_1)'q' ≈ squareQ(q)'
                     @test q*l ≈ a
-                    @test a*(qla\b) ≈ b atol=3000ε
+                    @test a*(qla\b) ≈ b atol=5000ε
                     @test Array(qla) ≈ a
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * squareQ(q) ≈ Matrix(I, sq, sq) atol=5000ε
@@ -433,10 +433,10 @@ include("test_rq.jl")
     Pi=inv(P)
 	C=choleskyinv!(copy(Matrix(P)))
 	@test(norm(C.c.L*C.c.U-P)/√n < etol)
-	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < 2etol)
     C = choleskyinv(P)
 	@test(norm(C.c.L*C.c.U-P)/√n < etol)
-	@test(norm(C.ci.U*C.ci.L-Pi)/√n < etol)
+	@test(norm(C.ci.U*C.ci.L-Pi)/√n < 2etol)
 end
 
 
