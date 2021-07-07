@@ -98,7 +98,7 @@ const Our=MatrixFactorizations
                     @test q'q ≈ Matrix(I, a_1, a_1)
                     @test Matrix(1.0I, a_1, a_1)'q' ≈ q'
                     @test r*q ≈ a
-                    @test a*(rqa\b) ≈ b atol=3000ε
+                    @test a*(rqa\b) ≈ b atol=5000ε
                     @test Array(rqa) ≈ a
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * q ≈ Matrix(I, sq, sq) atol=5000ε

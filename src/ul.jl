@@ -93,6 +93,13 @@ end
 #     ul!(A.data, pivot; check = check)
 # end
 
+if VERSION < v"1.7-"
+    _checknonsingular(info, ::Val{Pivot}) where Pivot = checknonsingular(info, Val{Pivot}())
+else
+    _checknonsingular(info, ::Val{true}) = checknonsingular(info, RowMaximum())
+    _checknonsingular(info, ::Val{false}) = checknonsingular(info, NoPivot())
+end
+
 """
     ul!(A, pivot=Val(true); check = true) -> UL
 
@@ -178,7 +185,7 @@ function generic_ulfact!(A::AbstractMatrix{T}, ::Val{Pivot} = Val(true);
             end
         end
     end
-    check && checknonsingular(info, Val{Pivot}())
+    check && _checknonsingular(info, Val{Pivot}())
     return UL{T}(A, ipiv, convert(BlasInt, info))
 end
 
