@@ -81,13 +81,13 @@ _qreltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
 
 function qrunblocked(A::AbstractMatrix{T}, arg) where T
     require_one_based_indexing(A)
-    AA = similar(A, _qleltype(T), size(A))
+    AA = similar(A, _qreltype(T), size(A))
     copyto!(AA, A)
     return qrunblocked!(AA, arg)
 end
 function qrunblocked(A::AbstractMatrix{T}) where T
     require_one_based_indexing(A)
-    AA = similar(A, _qleltype(T), size(A))
+    AA = similar(A, _qreltype(T), size(A))
     copyto!(AA, A)
     return qrunblocked!(AA)
 end
