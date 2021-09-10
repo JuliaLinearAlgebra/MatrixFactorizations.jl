@@ -57,10 +57,9 @@ Base.iterate(S::QR, ::Val{:R}) = (S.R, Val(:done))
 Base.iterate(S::QR, ::Val{:done}) = nothing
 
 
-function generic_qrfactUnblocked!(A::AbstractMatrix{T}) where {T}
+function _qrfactUnblocked!(_, _, A::AbstractMatrix{T}, τ::AbstractVector) where {T}
     require_one_based_indexing(A)
     m, n = size(A)
-    τ = zeros(T, min(m,n))
     for k = 1:min(m - 1 + !(T<:Real), n)
         x = view(A, k:m, k)
         τk = reflector!(x)
@@ -70,8 +69,9 @@ function generic_qrfactUnblocked!(A::AbstractMatrix{T}) where {T}
     QR(A, τ)
 end
 
-qrfactUnblocked!(A::AbstractMatrix) = generic_qrfactUnblocked!(A)
-qrfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = QR(LAPACK.geqrf!(A)...)
+_qrfactUnblocked!(::AbstractColumnMajor, ::AbstractStridedLayout, A::AbstractMatrix{T}, τ::AbstractVector{T}) where T<:BlasFloat = LAPACK.geqrf!(A,τ)
+qrfactUnblocked!(A::AbstractMatrix, τ::AbstractVector) = _qrfactUnblocked!(MemoryLayout(A), MemoryLayout(τ), A, τ)
+qrfactUnblocked!(A::AbstractMatrix{T}) where T = qrfactUnblocked!(A, zeros(T, min(size(A)...)))
 
 qrunblocked!(A::AbstractMatrix, ::Val{false}) = qrfactUnblocked!(A)
 qrunblocked!(A::AbstractMatrix) = qrunblocked!(A, Val(false))
