@@ -69,7 +69,7 @@ function _qrfactUnblocked!(_, _, A::AbstractMatrix{T}, τ::AbstractVector) where
     QR(A, τ)
 end
 
-_qrfactUnblocked!(::AbstractColumnMajor, ::AbstractStridedLayout, A::AbstractMatrix{T}, τ::AbstractVector{T}) where T<:BlasFloat = LAPACK.geqrf!(A,τ)
+_qrfactUnblocked!(::AbstractColumnMajor, ::AbstractStridedLayout, A::AbstractMatrix{T}, τ::AbstractVector{T}) where T<:BlasFloat = QR(LAPACK.geqrf!(A,τ)...)
 qrfactUnblocked!(A::AbstractMatrix, τ::AbstractVector) = _qrfactUnblocked!(MemoryLayout(A), MemoryLayout(τ), A, τ)
 qrfactUnblocked!(A::AbstractMatrix{T}) where T = qrfactUnblocked!(A, zeros(T, min(size(A)...)))
 
