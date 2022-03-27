@@ -39,6 +39,9 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 
+size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
+size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
+
 include("ul.jl")
 include("qr.jl")
 include("ql.jl")
