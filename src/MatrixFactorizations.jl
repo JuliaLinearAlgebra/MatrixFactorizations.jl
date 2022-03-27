@@ -40,6 +40,9 @@ axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
 Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+# needed for disambiguation with LinearAlgebra
+Base.@propagate_inbounds getindex(A::LayoutQ, i::Integer, j::Integer) =
+    layout_getindex(A, i, j)
 
 include("ul.jl")
 include("qr.jl")
