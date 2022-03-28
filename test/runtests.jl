@@ -233,6 +233,7 @@ end
         @test Q.τ ≈ Q̄.τ
         @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
         @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
+        @test copy(Q) ≡ Q
 
         A = randn(n,n+2)
         Q̃, R = qr(A[end:-1:1,end:-1:1])
