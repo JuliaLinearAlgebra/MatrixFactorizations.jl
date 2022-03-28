@@ -48,6 +48,9 @@ function getindex(Q::LayoutQ, ::Colon, j::Int)
 end
 
 
+size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
+size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
+
 include("ul.jl")
 include("qr.jl")
 include("ql.jl")
