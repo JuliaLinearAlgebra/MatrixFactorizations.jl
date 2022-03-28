@@ -40,6 +40,13 @@ axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
 Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
+function getindex(Q::LayoutQ, ::Colon, j::Int)
+   y = zeros(eltype(Q), size(Q, 2))
+   y[j] = 1
+   lmul!(Q, y)
+end
+
 
 include("ul.jl")
 include("qr.jl")
