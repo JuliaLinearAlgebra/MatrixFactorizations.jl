@@ -119,6 +119,7 @@ AbstractMatrix{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
 
 Matrix{T}(Q::RQPackedQ{S}) where {T,S} = Matrix{T}(lmul!(Q, Matrix{S}(I, size(Q,2), size(Q,2))))
 Base.size(Q::RQPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 1 ? 2 : dim)
+Base.size(Q::RQPackedQ) = size(Q, 1), size(Q, 2)
 
 function lmul!(A::RQPackedQ{T,S}, B::StridedVecOrMat{T}) where {T<:BlasFloat, S<:StridedMatrix}
     m,n = size(A.factors)
