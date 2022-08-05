@@ -409,6 +409,15 @@ end
         @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
         @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
     end
+
+    @testset "Q * Tri" begin
+        A = randn(5,5)
+        Q,L = ql(A)
+        @test Q * LowerTriangular(L) ≈ A
+        @test LowerTriangular(L) * Q ≈ L * Q
+        @test Q' * LowerTriangular(L) ≈ Q' * L
+        @test LowerTriangular(L)' * Q' ≈ A'
+    end
 end
 
 include("test_rq.jl")

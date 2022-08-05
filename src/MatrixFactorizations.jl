@@ -36,6 +36,11 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutrmul LayoutQ
 @_layoutrmul Adjoint{<:Any,<:LayoutQ}
 
+*(A::LayoutQ, B::AbstractTriangular) = mul(A, B)
+*(A::Adjoint{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
+*(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
+*(A::AbstractTriangular, B::Adjoint{<:Any,<:LayoutQ}) = mul(A, B)
+
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
