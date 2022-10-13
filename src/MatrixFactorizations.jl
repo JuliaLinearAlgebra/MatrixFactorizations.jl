@@ -3,8 +3,7 @@ using Base, LinearAlgebra, ArrayLayouts
 import Base: axes, axes1, getproperty, iterate, tail
 import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
    copy_oftype, checksquare, adjoint, transpose, AdjOrTrans, HermOrSym
-import LinearAlgebra.BLAS: libblas
-import LinearAlgebra.LAPACK: liblapack, chkuplo, chktrans
+import LinearAlgebra.LAPACK: chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
    qr, axpy!, ldiv!, rdiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
    chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
