@@ -254,8 +254,21 @@ function QLPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
 end
 
 QLPackedQ{T}(Q::QLPackedQ) where {T} = QLPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
-AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
-AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+AbstractQ{T}(Q::QLPackedQ{T}) where {T} = Q
+AbstractQ{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+convert(::Type{AbstractQ{T}}, Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+
+Matrix{T}(Q::QLPackedQ{S}) where {T,S} =
+    convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
+Matrix(Q::QLPackedQ{S}) where {S} = Matrix{S}(Q)
+
+if VERSION < v"1.10-"
+    AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
+    AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+else
+    AbstractMatrix{T}(Q::QLPackedQ) where {T} = Matrix{T}(Q)
+end
 
 size(Q::QLPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 
@@ -266,7 +279,7 @@ size(F::QL) = size(getfield(F, :factors))
 ## Multiplication by Q
 function _mul(A::QLPackedQ, B::AbstractMatrix)
     TAB = promote_type(eltype(A), eltype(B))
-    Anew = convert(AbstractMatrix{TAB}, A)
+    Anew = convert(AbstractQtype{TAB}, A)
     if size(A.factors, 1) == size(B, 1)
         Bnew = copy_oftype(B, TAB)
     elseif size(A.factors, 2) == size(B, 1)
@@ -278,6 +291,35 @@ function _mul(A::QLPackedQ, B::AbstractMatrix)
 end
 
 (*)(A::QLPackedQ, B::StridedMatrix) = _mul(A, B)
+
+if isdefined(LinearAlgebra, :AdjointQ) # VERSION >= v"1.10-"
+    (*)(A::QLPackedQ, B::StridedVector) = _mul(A, B)
+    function _mul(Q::QLPackedQ, b::AbstractVector)
+        T = promote_type(eltype(Q), eltype(b))
+        if size(Q.factors, 1) == length(b)
+            bnew = copy_similar(b, T)
+        elseif size(Q.factors, 2) == length(b)
+            bnew = [b; zeros(T, size(Q.factors, 1) - length(b))]
+        else
+            throw(DimensionMismatch("vector must have length either $(size(Q.factors, 1)) or $(size(Q.factors, 2))"))
+        end
+        lmul!(convert(AbstractQ{T}, Q), bnew)
+    end
+    # function (*)(A::AbstractMatrix, adjQ::LinearAlgebra.AdjointQ{<:Any,<:QLPackedQ})
+    #     Q = adjQ.Q
+    #     T = promote_type(eltype(A), eltype(adjQ))
+    #     adjQQ = convert(AbstractQ{T}, adjQ)
+    #     if size(A,2) == size(Q.factors, 1)
+    #         AA = LinearAlgebra.copy_similar(A, T)
+    #         return rmul!(AA, adjQQ)
+    #     elseif size(A,2) == size(Q.factors,2)
+    #         return rmul!([A zeros(T, size(A, 1), size(Q.factors, 1) - size(Q.factors, 2))], adjQQ)
+    #     else
+    #         throw(DimensionMismatch("matrix A has dimensions $(size(A)) but Q-matrix B has dimensions $(size(adjQ))"))
+    #     end
+    # end
+    # (*)(u::LinearAlgebra.AdjointAbsVec, Q::LinearAlgebra.AdjointQ{<:Any,<:QLPackedQ}) = (Q'u')'
+end
 
 ### QB
 abstract type AbstractQLLayout <: MemoryLayout end
@@ -334,7 +376,7 @@ end
 function materialize!(M::Lmul{<:AdjQLPackedQLayout})
     adjA,B = M.A, M.B
     require_one_based_indexing(B)
-    A = adjA.parent
+    A = parent(adjA)
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
     if mA != mB
@@ -392,7 +434,7 @@ end
 ### AQc
 function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout}) 
     A,adjQ = M.A, M.B    
-    Q = adjQ.parent
+    Q = parent(adjQ)
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
     if nA != mQ

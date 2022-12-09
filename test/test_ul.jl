@@ -260,22 +260,7 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
             bf = IOBuffer()
             show(bf, "text/plain", ul(Matrix(I, 4, 4)))
             seekstart(bf)
-			@test String(take!(bf)) == if VERSION < v"1.6-"
-"""
-UL{Float64,Array{Float64,2},Array{Int64,1}}
-U factor:
-4×4 Array{Float64,2}:
- 1.0  0.0  0.0  0.0
- 0.0  1.0  0.0  0.0
- 0.0  0.0  1.0  0.0
- 0.0  0.0  0.0  1.0
-L factor:
-4×4 Array{Float64,2}:
- 1.0  0.0  0.0  0.0
- 0.0  1.0  0.0  0.0
- 0.0  0.0  1.0  0.0
- 0.0  0.0  0.0  1.0"""
- 			else
+			@test String(take!(bf)) ==
 """
 UL{Float64, Matrix{Float64}, Vector{Int64}}
 U factor:
@@ -290,7 +275,6 @@ L factor:
  0.0  1.0  0.0  0.0
  0.0  0.0  1.0  0.0
  0.0  0.0  0.0  1.0"""
- 			end
     end
 
     @testset "propertynames" begin

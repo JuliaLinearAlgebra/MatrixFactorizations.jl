@@ -1,6 +1,6 @@
 using MatrixFactorizations, LinearAlgebra, Random, ArrayLayouts, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
-import MatrixFactorizations: QRCompactWYQLayout
+using MatrixFactorizations: QRCompactWYQLayout, AbstractQtype
 
 struct MyMatrix <: LayoutMatrix{Float64}
     A::Matrix{Float64}
@@ -43,7 +43,7 @@ bimg  = randn(n,2)/2
 
 # helper functions to unambiguously recover explicit forms of an implicit QL Q
 squareQ(Q::LinearAlgebra.AbstractQ) = (sq = size(Q.factors, 1); lmul!(Q, Matrix{eltype(Q)}(I, sq, sq)))
-rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
+rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
 
 @testset "QR" begin
     @testset for eltya in (Float32, Float64, ComplexF32, ComplexF64, BigFloat, Int)
@@ -85,7 +85,11 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * squareQ(q) ≈ Matrix(I, sq, sq) atol=5000ε
                     if eltya != Int
-                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        if VERSION < v"1.10-"
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        else
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
+                        end
                         ac = copy(a)
                         @test qrunblocked!(a[:, 1:5])\b == qrunblocked!(view(ac, :, 1:5))\b
                     end
@@ -109,7 +113,11 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
                     sq = size(q.factors, 1)
                     @test *(LowerTriangular(Matrix{eltyb}(I, sq, sq)), adjoint(q))*squareQ(q) ≈ Matrix(I, a_1, a_1) atol=5000ε
                     if eltya != Int
-                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab},q)
+                        if VERSION < v"1.10-"
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        else
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
+                        end
                     end
                 end
             end
@@ -158,7 +166,7 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = convert(Array, Q)
 
     @testset "Issue 24589. Promotion of rational matrices" begin
         A = rand(1//1:5//5, 4,3)
-        @test first(qrunblocked(A)) == first(qrunblocked(float(A)))
+        @test Matrix(first(qrunblocked(A))) == Matrix(first(qrunblocked(float(A))))
     end
 
     @testset "Issue Test Factorization fallbacks for rectangular problems" begin
@@ -232,7 +240,7 @@ end
         @test Q.factors ≈ Q̄.factors
         @test Q.τ ≈ Q̄.τ
         @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
-        @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
+        @test Q̃[end:-1:1,end:-1:1] ≈ Matrix(Q) ≈ Matrix(Q̄)
         @test copy(Q) ≡ Q
 
         A = randn(n,n+2)
@@ -242,7 +250,7 @@ end
         @test Q.factors ≈ Q̄.factors
         @test Q.τ ≈ Q̄.τ
         @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
-        @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
+        @test Q̃[end:-1:1,end:-1:1] ≈ Matrix(Q) ≈ Matrix(Q̄)
 
         A = randn(n+2,n)
         Q̃, R = qr(A[end:-1:1,end:-1:1])
@@ -251,7 +259,7 @@ end
         @test Q.factors ≈ Q̄.factors
         @test Q.τ ≈ Q̄.τ
         @test R[end:-1:1,end:-1:1] ≈ L ≈ L̄
-        @test Q̃[end:-1:1,end:-1:1] ≈ Q ≈ Q̄
+        @test Q̃[end:-1:1,end:-1:1] ≈ squareQ(Q) ≈ squareQ(Q̄)
     end
 
     @testset for eltya in (Float32, Float64, ComplexF32, ComplexF64, BigFloat, Int)
@@ -293,7 +301,7 @@ end
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * squareQ(q) ≈ Matrix(I, sq, sq) atol=5000ε
                     if eltya != Int
-                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractQtype{tab}, q)
                         ac = copy(a)
                         @test ql!(a[:, 1:5])\b == ql!(view(ac, :, 1:5))\b
                     end
@@ -317,7 +325,11 @@ end
                     sq = size(q.factors, 1)
                     @test *(LowerTriangular(Matrix{eltyb}(I, sq, sq)), adjoint(q))*squareQ(q) ≈ Matrix(I, a_1, a_1) atol=5000ε
                     if eltya != Int
-                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab},q)
+                        if VERSION < v"1.10-"
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        else
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
+                        end
                     end
                 end
             end
@@ -366,7 +378,7 @@ end
 
     @testset "Issue 24589. Promotion of rational matrices" begin
         A = rand(1//1:5//5, 4,3)
-        @test first(ql(A)) == first(ql(float(A)))
+        @test Matrix(first(ql(A))) == Matrix(first(ql(float(A))))
     end
 
     @testset "Issue Test Factorization fallbacks for rectangular problems" begin

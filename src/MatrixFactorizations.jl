@@ -29,28 +29,18 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
 
 export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, choleskyinv!, choleskyinv
 
+const AdjointQtype = isdefined(LinearAlgebra, :AdjointQ) ? LinearAlgebra.AdjointQ : Adjoint
+const AbstractQtype = AbstractQ <: AbstractMatrix ? AbstractMatrix : AbstractQ
+
 abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutlmul LayoutQ
-@_layoutlmul Adjoint{<:Any,<:LayoutQ}
+@_layoutlmul AdjointQtype{<:Any,<:LayoutQ}
 @_layoutrmul LayoutQ
-@_layoutrmul Adjoint{<:Any,<:LayoutQ}
-
-*(A::LayoutQ, B::AbstractTriangular) = mul(A, B)
-*(A::Adjoint{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
-*(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
-*(A::AbstractTriangular, B::Adjoint{<:Any,<:LayoutQ}) = mul(A, B)
+@_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
 
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
-Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
-Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
-function getindex(Q::LayoutQ, ::Colon, j::Int)
-   y = zeros(eltype(Q), size(Q, 2))
-   y[j] = 1
-   lmul!(Q, y)
-end
-
 
 size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
