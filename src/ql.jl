@@ -297,7 +297,7 @@ if isdefined(LinearAlgebra, :AdjointQ) # VERSION >= v"1.10-"
     function _mul(Q::QLPackedQ, b::AbstractVector)
         T = promote_type(eltype(Q), eltype(b))
         if size(Q.factors, 1) == length(b)
-            bnew = copy_similar(b, T)
+            bnew = LinearAlgebra.copy_similar(b, T)
         elseif size(Q.factors, 2) == length(b)
             bnew = [b; zeros(T, size(Q.factors, 1) - length(b))]
         else
