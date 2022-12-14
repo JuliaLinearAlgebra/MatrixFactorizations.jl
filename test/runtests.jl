@@ -301,7 +301,7 @@ end
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * squareQ(q) ≈ Matrix(I, sq, sq) atol=5000ε
                     if eltya != Int
-                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractQtype{tab}, q)
+                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(AbstractQtype{tab}, q))
                         ac = copy(a)
                         @test ql!(a[:, 1:5])\b == ql!(view(ac, :, 1:5))\b
                     end

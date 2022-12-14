@@ -38,6 +38,21 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
 
+*(A::LayoutQ, B::AbstractTriangular) = mul(A, B)
+*(A::Adjoint{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
+*(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
+*(A::AbstractTriangular, B::Adjoint{<:Any,<:LayoutQ}) = mul(A, B)
+
+if VERSION < v"1.10-"
+   Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+   Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
+   function getindex(Q::LayoutQ, ::Colon, j::Int)
+      y = zeros(eltype(Q), size(Q, 2))
+      y[j] = 1
+      lmul!(Q, y)
+   end
+end
+
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
