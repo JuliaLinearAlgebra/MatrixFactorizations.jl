@@ -147,7 +147,7 @@ ldiv!(F::QR, B::LayoutMatrix) = ArrayLayouts.ldiv!(F, B)
 
 
 """
-    QRPackedQ <: AbstractMatrix
+    QRPackedQ <: LinearAlgebra.AbstractQ
 
 The orthogonal/unitary ``Q`` matrix of a QR factorization stored in [`QR`](@ref).
 """

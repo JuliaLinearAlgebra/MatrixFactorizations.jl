@@ -235,7 +235,7 @@ Base.propertynames(F::QL, private::Bool=false) =
 
 
 """
-    QLPackedQ <: AbstractMatrix
+    QLPackedQ <: LinearAlgebra.AbstractQ
 
 The orthogonal/unitary ``Q`` matrix of a QL factorization stored in [`QL`](@ref).
 """
