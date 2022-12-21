@@ -187,48 +187,6 @@ end
 size(F::QR, dim::Integer) = size(getfield(F, :factors), dim)
 size(F::QR) = size(getfield(F, :factors))
 
-
-## Multiplication by Q
-### QB
-if isdefined(LinearAlgebra, :AdjointQ) # VERSION >= v"1.10-"
-    function (*)(Q::QRPackedQ, b::AbstractVector)
-        T = promote_type(eltype(Q), eltype(b))
-        if size(Q.factors, 1) == length(b)
-            bnew = LinearAlgebra.copy_similar(b, T)
-        elseif size(Q.factors, 2) == length(b)
-            bnew = [b; zeros(T, size(Q.factors, 1) - length(b))]
-        else
-            throw(DimensionMismatch("vector must have length either $(size(Q.factors, 1)) or $(size(Q.factors, 2))"))
-        end
-        lmul!(convert(AbstractQ{T}, Q), bnew)
-    end
-    function (*)(Q::QRPackedQ, B::AbstractMatrix)
-        T = promote_type(eltype(Q), eltype(B))
-        if size(Q.factors, 1) == size(B, 1)
-            Bnew = LinearAlgebra.copy_similar(B, T)
-        elseif size(Q.factors, 2) == size(B, 1)
-            Bnew = [B; zeros(T, size(Q.factors, 1) - size(B,1), size(B, 2))]
-        else
-            throw(DimensionMismatch("first dimension of matrix must have size either $(size(Q.factors, 1)) or $(size(Q.factors, 2))"))
-        end
-        lmul!(convert(AbstractQ{T}, Q), Bnew)
-    end
-    # function (*)(A::AbstractMatrix, adjQ::LinearAlgebra.AdjointQ{<:Any,<:QRPackedQ})
-    #     Q = adjQ.Q
-    #     T = promote_type(eltype(A), eltype(adjQ))
-    #     adjQQ = convert(AbstractQ{T}, adjQ)
-    #     if size(A,2) == size(Q.factors, 1)
-    #         AA = LinearAlgebra.copy_similar(A, T)
-    #         return rmul!(AA, adjQQ)
-    #     elseif size(A,2) == size(Q.factors,2)
-    #         return rmul!([A zeros(T, size(A, 1), size(Q.factors, 1) - size(Q.factors, 2))], adjQQ)
-    #     else
-    #         throw(DimensionMismatch("matrix A has dimensions $(size(A)) but Q-matrix B has dimensions $(size(adjQ))"))
-    #     end
-    # end
-    # (*)(u::LinearAlgebra.AdjointAbsVec, Q::LinearAlgebra.AdjointQ{<:Any,<:QRPackedQ}) = (Q'u')'
-end
-
 MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} =
     QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
 

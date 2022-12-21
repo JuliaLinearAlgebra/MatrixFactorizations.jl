@@ -32,11 +32,56 @@ export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, choleskyinv!, choles
 const AdjointQtype = isdefined(LinearAlgebra, :AdjointQ) ? LinearAlgebra.AdjointQ : Adjoint
 const AbstractQtype = AbstractQ <: AbstractMatrix ? AbstractMatrix : AbstractQ
 
+# The abstract type LayoutQ implicitly assumes that any subtype admits a field
+# named factors. Based on this field, `size`, `axes` and context-dependent
+# multiplication work. The same used to be the case before v1.9 with the even
+# more generic LinearAlgebra.AbstractQ. Moreover, it is assumed that LayoutQ
+# objects are flexible in size when multiplied from the left, or its adjoint
+# from the right.
 abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutlmul LayoutQ
 @_layoutlmul AdjointQtype{<:Any,<:LayoutQ}
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
+
+function (*)(Q::LayoutQ, b::AbstractVector)
+   T = promote_type(eltype(Q), eltype(b))
+   if size(Q.factors, 1) == length(b)
+       bnew = copyto!(similar(b, T, size(b)), b)
+   elseif size(Q.factors, 2) == length(b)
+       bnew = [b; zeros(T, size(Q.factors, 1) - length(b))]
+   else
+       throw(DimensionMismatch("vector must have length either $(size(Q.factors, 1)) or $(size(Q.factors, 2))"))
+   end
+   lmul!(convert(AbstractQtype{T}, Q), bnew)
+end
+(*)(Q::LayoutQ, b::LayoutVector) = ArrayLayouts.mul(Q, b) # disambiguation
+function (*)(Q::LayoutQ, B::AbstractMatrix)
+   T = promote_type(eltype(Q), eltype(B))
+   if size(Q.factors, 1) == size(B, 1)
+       Bnew = copyto!(similar(B, T, size(B)), B)
+   elseif size(Q.factors, 2) == size(B, 1)
+       Bnew = [B; zeros(T, size(Q.factors, 1) - size(B,1), size(B, 2))]
+   else
+       throw(DimensionMismatch("first dimension of matrix must have size either $(size(Q.factors, 1)) or $(size(Q.factors, 2))"))
+   end
+   lmul!(convert(AbstractQtype{T}, Q), Bnew)
+end
+(*)(Q::LayoutQ, B::LayoutMatrix) = ArrayLayouts.mul(Q, B) # disambiguation
+function (*)(A::AbstractMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ})
+    Q = adjQ.Q
+    T = promote_type(eltype(A), eltype(adjQ))
+    adjQQ = convert(AbstractQtype{T}, adjQ)
+    if size(A,2) == size(Q.factors, 1)
+        AA = copyto!(similar(A, T, size(A)), A)
+        return rmul!(AA, adjQQ)
+    elseif size(A,2) == size(Q.factors,2)
+        return rmul!([A zeros(T, size(A, 1), size(Q.factors, 1) - size(Q.factors, 2))], adjQQ)
+    else
+        throw(DimensionMismatch("matrix A has dimensions $(size(A)) but Q-matrix B has dimensions $(size(adjQ))"))
+    end
+end
+(*)(u::LinearAlgebra.AdjointAbsVec, Q::AdjointQtype{<:Any,<:LayoutQ}) = (Q'u')'
 
 *(A::LayoutQ, B::AbstractTriangular) = mul(A, B)
 *(A::Adjoint{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
