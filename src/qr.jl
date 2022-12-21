@@ -180,6 +180,8 @@ if VERSION < v"1.10-"
     AbstractMatrix{T}(Q::QRPackedQ{T}) where {T} = Q
     AbstractMatrix{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
     convert(::Type{AbstractMatrix{T}}, Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:QRPackedQ}) where {T} =
+        (QRPackedQ{T}(parent(adjQ)))'
 else
     AbstractMatrix{T}(Q::QRPackedQ) where {T} = Matrix{T}(Q)
 end

@@ -266,6 +266,8 @@ if VERSION < v"1.10-"
     AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
     AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
     convert(::Type{AbstractMatrix{T}}, Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:QLPackedQ}) where {T} =
+        (QLPackedQ{T}(parent(adjQ)))'
 else
     AbstractMatrix{T}(Q::QLPackedQ) where {T} = Matrix{T}(Q)
 end

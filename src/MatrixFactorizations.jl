@@ -44,7 +44,9 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
 
-function (*)(Q::LayoutQ, b::AbstractVector)
+(*)(Q::LayoutQ, b::AbstractVector) = _mul(Q, b)
+(*)(Q::LayoutQ, b::LayoutVector) = ArrayLayouts.mul(Q, b) # disambiguation w/ ArrayLayouts.jl
+function _mul(Q::LayoutQ, b::AbstractVector)
    T = promote_type(eltype(Q), eltype(b))
    if size(Q.factors, 1) == length(b)
        bnew = copyto!(similar(b, T, size(b)), b)
@@ -55,8 +57,9 @@ function (*)(Q::LayoutQ, b::AbstractVector)
    end
    lmul!(convert(AbstractQtype{T}, Q), bnew)
 end
-(*)(Q::LayoutQ, b::LayoutVector) = ArrayLayouts.mul(Q, b) # disambiguation
-function (*)(Q::LayoutQ, B::AbstractMatrix)
+(*)(Q::LayoutQ, B::AbstractMatrix) = _mul(Q, B)
+(*)(Q::LayoutQ, B::LayoutMatrix) = ArrayLayouts.mul(Q, B) # disambiguation w/ ArrayLayouts.jl
+function _mul(Q::LayoutQ, B::AbstractMatrix)
    T = promote_type(eltype(Q), eltype(B))
    if size(Q.factors, 1) == size(B, 1)
        Bnew = copyto!(similar(B, T, size(B)), B)
@@ -67,9 +70,9 @@ function (*)(Q::LayoutQ, B::AbstractMatrix)
    end
    lmul!(convert(AbstractQtype{T}, Q), Bnew)
 end
-(*)(Q::LayoutQ, B::LayoutMatrix) = ArrayLayouts.mul(Q, B) # disambiguation
-function (*)(A::AbstractMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ})
-    Q = adjQ.Q
+(*)(A::AbstractMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ}) = _mul(A, adjQ)
+function _mul(A::AbstractMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ})
+    Q = parent(adjQ)
     T = promote_type(eltype(A), eltype(adjQ))
     adjQQ = convert(AbstractQtype{T}, adjQ)
     if size(A,2) == size(Q.factors, 1)
@@ -84,18 +87,29 @@ end
 (*)(u::LinearAlgebra.AdjointAbsVec, Q::AdjointQtype{<:Any,<:LayoutQ}) = (Q'u')'
 
 *(A::LayoutQ, B::AbstractTriangular) = mul(A, B)
-*(A::Adjoint{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
+*(A::AdjointQtype{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
 *(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
-*(A::AbstractTriangular, B::Adjoint{<:Any,<:LayoutQ}) = mul(A, B)
+*(A::AbstractTriangular, B::AdjointQtype{<:Any,<:LayoutQ}) = mul(A, B)
 
 if VERSION < v"1.10-"
-   Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
-   Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
-   function getindex(Q::LayoutQ, ::Colon, j::Int)
-      y = zeros(eltype(Q), size(Q, 2))
-      y[j] = 1
-      lmul!(Q, y)
-   end
+    (*)(Q::LayoutQ, b::StridedVector)  = _mul(Q, b)
+    (*)(Q::LayoutQ, B::StridedMatrix)  = _mul(Q, B)
+    (*)(Q::LayoutQ, B::Adjoint{<:Any,<:StridedVecOrMat}) = _mul(Q, B)
+    (*)(A::StridedMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ})  = _mul(A, adjQ)
+    (*)(A::Adjoint{<:Any,<:StridedMatrix}, adjQ::AdjointQtype{<:Any,<:LayoutQ}) = _mul(A, adjQ)
+
+    Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+    Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
+    function getindex(Q::LayoutQ, ::Colon, j::Int)
+        y = zeros(eltype(Q), size(Q, 2))
+        y[j] = 1
+        lmul!(Q, y)
+    end
+
+    (*)(Q::LayoutQ, P::LayoutQ) = mul(Q, P)
+    (*)(Q::LayoutQ, adjQ::Adjoint{<:Any,<:LayoutQ}) = mul(Q, adjQ)
+    (*)(adjQ::Adjoint{<:Any,<:LayoutQ}, Q::LayoutQ) = mul(adjQ, Q)
+    (*)(adjQ::Adjoint{<:Any,<:LayoutQ}, adjP::Adjoint{<:Any,<:LayoutQ}) = mul(adjQ, adjP)
 end
 
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)

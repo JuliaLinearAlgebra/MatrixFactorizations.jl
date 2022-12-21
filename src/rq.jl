@@ -127,6 +127,8 @@ if VERSION < v"1.10-"
     AbstractMatrix{T}(Q::RQPackedQ{T}) where {T} = Q
     AbstractMatrix{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
     convert(::Type{AbstractMatrix{T}}, Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:RQPackedQ}) where {T} =
+        (RQPackedQ{T}(parent(adjQ)))'
 else
     AbstractMatrix{T}(Q::RQPackedQ) where {T} = Matrix{T}(Q)
 end
