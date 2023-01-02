@@ -23,7 +23,8 @@ import Base: convert, size, view, unsafe_indices,
 
 import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_layoutrmul,
    MemoryLayout, adjointlayout, AbstractQLayout, QRPackedQLayout,
-   QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout
+   QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout,
+   layout_getindex
 
 
 
@@ -98,7 +99,6 @@ if VERSION < v"1.10-"
     (*)(A::StridedMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ})  = _mul(A, adjQ)
     (*)(A::Adjoint{<:Any,<:StridedMatrix}, adjQ::AdjointQtype{<:Any,<:LayoutQ}) = _mul(A, adjQ)
 
-    Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
     Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
     function getindex(Q::LayoutQ, ::Colon, j::Int)
         y = zeros(eltype(Q), size(Q, 2))
@@ -115,6 +115,11 @@ end
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
+
+Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+# by default, fall back to AbstractQ  methods
+layout_getindex(A::LayoutQ, I...) =
+    Base.invoke(Base.getindex, Tuple{AbstractQ, typeof.(I)...}, A, I...)
 
 size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
