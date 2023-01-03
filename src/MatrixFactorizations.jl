@@ -105,6 +105,8 @@ if VERSION < v"1.10-"
         y[j] = 1
         lmul!(Q, y)
     end
+    Base.@propagate_inbounds layout_getindex(A::LayoutQ, I::CartesianIndex) = A[to_indices(A, (I,))...]
+
 
     (*)(Q::LayoutQ, P::LayoutQ) = mul(Q, P)
     (*)(Q::LayoutQ, adjQ::Adjoint{<:Any,<:LayoutQ}) = mul(Q, adjQ)
