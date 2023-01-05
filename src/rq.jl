@@ -108,8 +108,6 @@ function RQPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
     RQPackedQ(convert(AbstractMatrix{T}, factors), convert(Vector{T}, τ))
 end
 RQPackedQ{T}(Q::RQPackedQ) where {T} = RQPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(Vector{T}, Q.τ))
-AbstractMatrix{T}(Q::RQPackedQ{T}) where {T} = Q
-AbstractMatrix{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
 # this makes the rectangular version, alas.
 # function Matrix{T}(Q::RQPackedQ{T}) where {T<:BlasFloat}
 #     m,n = size(Q.factors)
@@ -117,11 +115,28 @@ AbstractMatrix{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
 #     LAPACK.orgrq!(Q.factors[i0:m,1:n], Q.τ)
 # end
 
-Matrix{T}(Q::RQPackedQ{S}) where {T,S} = Matrix{T}(lmul!(Q, Matrix{S}(I, size(Q,2), size(Q,2))))
+Matrix{T}(Q::RQPackedQ{S}) where {T,S} =
+    convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q,2), size(Q,2))))
+Matrix(Q::RQPackedQ{S}) where {S} = Matrix{S}(Q)
+
+AbstractQ{T}(Q::RQPackedQ{T}) where {T} = Q
+AbstractQ{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
+convert(::Type{AbstractQ{T}}, Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
+
+if VERSION < v"1.10-"
+    AbstractMatrix{T}(Q::RQPackedQ{T}) where {T} = Q
+    AbstractMatrix{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:RQPackedQ}) where {T} =
+        (RQPackedQ{T}(parent(adjQ)))'
+else
+    AbstractMatrix{T}(Q::RQPackedQ) where {T} = Matrix{T}(Q)
+end
+
 Base.size(Q::RQPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 1 ? 2 : dim)
 Base.size(Q::RQPackedQ) = size(Q, 1), size(Q, 2)
 
-function lmul!(A::RQPackedQ{T,S}, B::StridedVecOrMat{T}) where {T<:BlasFloat, S<:StridedMatrix}
+function lmul!(A::RQPackedQ{T,<:StridedMatrix}, B::StridedVecOrMat{T}) where {T<:BlasFloat}
     m,n = size(A.factors)
     if m > n
         return LAPACK.ormrq!('L','N',view(A.factors, m-n+1:m, 1:n),A.τ,B)
@@ -162,7 +177,7 @@ end
 
 function (*)(B::StridedMatrix, Q::RQPackedQ)
     TBQ = promote_type(eltype(Q), eltype(B))
-    Qnew = convert(AbstractMatrix{TBQ}, Q)
+    Qnew = convert(AbstractQtype{TBQ}, Q)
     if size(Q.factors, 2) == size(B, 2)
         Bnew = copy_oftype(B, TBQ)
     elseif size(Q.factors, 1) == size(B, 2)
@@ -174,9 +189,9 @@ function (*)(B::StridedMatrix, Q::RQPackedQ)
     rmul!(Bnew, Qnew)
 end
 
-function lmul!(adjA::Adjoint{<:Any,<:RQPackedQ{T,S}}, B::StridedVecOrMat{T}
-               ) where {T<:BlasReal,S<:StridedMatrix}
-    A = adjA.parent
+function lmul!(adjA::AdjointQtype{<:Any,<:RQPackedQ{T,<:StridedMatrix}}, B::StridedVecOrMat{T}
+               ) where {T<:BlasReal}
+    A = parent(adjA)
     m,n = size(A.factors)
     if m > n
         return LAPACK.ormrq!('L','T',view(A.factors, m-n+1:m, 1:n),A.τ,B)
@@ -184,9 +199,9 @@ function lmul!(adjA::Adjoint{<:Any,<:RQPackedQ{T,S}}, B::StridedVecOrMat{T}
         return LAPACK.ormrq!('L','T',A.factors,A.τ,B)
     end
 end
-function lmul!(adjA::Adjoint{<:Any,<:RQPackedQ{T,S}}, B::StridedVecOrMat{T}
+function lmul!(adjA::AdjointQtype{<:Any,<:RQPackedQ{T,S}}, B::StridedVecOrMat{T}
                ) where {T<:BlasComplex,S<:StridedMatrix}
-    A = adjA.parent
+    A = parent(adjA)
     m,n = size(A.factors)
     if m > n
         return LAPACK.ormrq!('L','C',view(A.factors, m-n+1:m, 1:n),A.τ,B)
@@ -194,9 +209,9 @@ function lmul!(adjA::Adjoint{<:Any,<:RQPackedQ{T,S}}, B::StridedVecOrMat{T}
         return LAPACK.ormrq!('L','C',A.factors,A.τ,B)
     end
 end
-function lmul!(adjA::Adjoint{<:Any,<:RQPackedQ}, B::AbstractVecOrMat)
+function lmul!(adjA::AdjointQtype{<:Any,<:RQPackedQ}, B::AbstractVecOrMat)
     require_one_based_indexing(B)
-    A = adjA.parent
+    A = parent(adjA)
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
     if nA != mB
@@ -263,9 +278,9 @@ function rmul!(A::StridedMatrix,Q::RQPackedQ)
     end
     A
 end
-function rmul!(A::StridedVecOrMat{T}, adjB::Adjoint{<:Any,<:RQPackedQ{T}}
+function rmul!(A::StridedVecOrMat{T}, adjB::AdjointQtype{<:Any,<:RQPackedQ{T}}
                ) where {T<:BlasReal}
-    B = adjB.parent
+    B = parent(adjB)
     m,n = size(B.factors)
     if m > n
         return LAPACK.ormrq!('R','T',view(B.factors, m-n+1:m, 1:n),B.τ,A)
@@ -273,9 +288,9 @@ function rmul!(A::StridedVecOrMat{T}, adjB::Adjoint{<:Any,<:RQPackedQ{T}}
         return LAPACK.ormrq!('R','T',B.factors,B.τ,A)
     end
 end
-function rmul!(A::StridedVecOrMat{T}, adjB::Adjoint{<:Any,<:RQPackedQ{T}}
+function rmul!(A::StridedVecOrMat{T}, adjB::AdjointQtype{<:Any,<:RQPackedQ{T}}
                ) where {T<:BlasComplex}
-    B = adjB.parent
+    B = parent(adjB)
     m,n = size(B.factors)
     if m > n
         return LAPACK.ormrq!('R','C',view(B.factors, m-n+1:m, 1:n),B.τ,A)
@@ -283,8 +298,8 @@ function rmul!(A::StridedVecOrMat{T}, adjB::Adjoint{<:Any,<:RQPackedQ{T}}
         return LAPACK.ormrq!('R','C',B.factors,B.τ,A)
     end
 end
-function rmul!(A::StridedMatrix, adjQ::Adjoint{<:Any,<:RQPackedQ})
-    Q = adjQ.parent
+function rmul!(A::StridedMatrix, adjQ::AdjointQtype{<:Any,<:RQPackedQ})
+    Q = parent(adjQ)
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
     if nA != nQ

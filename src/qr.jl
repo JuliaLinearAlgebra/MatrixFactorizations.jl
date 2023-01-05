@@ -147,7 +147,7 @@ ldiv!(F::QR, B::LayoutMatrix) = ArrayLayouts.ldiv!(F, B)
 
 
 """
-    QRPackedQ <: AbstractMatrix
+    QRPackedQ <: LinearAlgebra.AbstractQ
 
 The orthogonal/unitary ``Q`` matrix of a QR factorization stored in [`QR`](@ref).
 """
@@ -168,18 +168,26 @@ end
 QRPackedQ{T}(Q::QRPackedQ) where {T} = QRPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
 QRPackedQ(Q::LinearAlgebra.QRPackedQ) = QRPackedQ(Q.factors, Q.τ)
 
+AbstractQ{T}(Q::QRPackedQ{T}) where {T} = Q
+AbstractQ{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
+convert(::Type{AbstractQ{T}}, Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
 
+Matrix{T}(Q::QRPackedQ{S}) where {T,S} =
+    convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
+Matrix(Q::QRPackedQ{S}) where {S} = Matrix{S}(Q)
 
-AbstractMatrix{T}(Q::QRPackedQ{T}) where {T} = Q
-AbstractMatrix{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
-
+if VERSION < v"1.10-"
+    AbstractMatrix{T}(Q::QRPackedQ{T}) where {T} = Q
+    AbstractMatrix{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:QRPackedQ}) where {T} =
+        (QRPackedQ{T}(parent(adjQ)))'
+else
+    AbstractMatrix{T}(Q::QRPackedQ) where {T} = Matrix{T}(Q)
+end
 
 size(F::QR, dim::Integer) = size(getfield(F, :factors), dim)
 size(F::QR) = size(getfield(F, :factors))
-
-
-## Multiplication by Q
-### QB
 
 MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} =
     QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()

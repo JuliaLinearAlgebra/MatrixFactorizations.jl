@@ -34,7 +34,7 @@ const Our=MatrixFactorizations
             @test Q.factors ≈ Q̄.factors
             @test Q.τ ≈ Q̄.τ
             @test R ≈ Ṟ
-            @test Q ≈ Q̄
+            @test Matrix(Q) ≈ Matrix(Q̄)
         end
         @testset "Compare with LAPACK (rectangular $elty)" begin
             n = 10
@@ -47,7 +47,7 @@ const Our=MatrixFactorizations
             @test Q.factors ≈ Q̄.factors
             @test Q.τ ≈ Q̄.τ
             @test R ≈ Ṟ
-            @test Q ≈ Q̄
+            @test Matrix(Q) ≈ Matrix(Q̄)
 
             A = randn(n+2,n)
             R, Q = rq(A)
@@ -58,7 +58,7 @@ const Our=MatrixFactorizations
             @test Q.factors ≈ Q̄.factors
             @test Q.τ ≈ Q̄.τ
             @test R ≈ Ṟ
-            @test Q ≈ Q̄
+            @test Matrix(Q) ≈ Matrix(Q̄)
         end
     end
     @testset for eltya in (Float32, Float64, ComplexF32, ComplexF64, BigFloat, Complex{BigFloat}, Int)
@@ -94,16 +94,20 @@ const Our=MatrixFactorizations
                     @test_throws ErrorException rqa.Z
                     @test q'*q ≈ Matrix(I, a_1, a_1)
                     @test q*q' ≈ Matrix(I, a_1, a_1)
-                    @test q'*Matrix(1.0I, a_1, a_1)' ≈ q'
+                    @test q'*Matrix(1.0I, a_1, a_1)' ≈ Matrix(q')
                     @test q'q ≈ Matrix(I, a_1, a_1)
-                    @test Matrix(1.0I, a_1, a_1)'q' ≈ q'
+                    @test Matrix(1.0I, a_1, a_1)'q' ≈ Matrix(q')
                     @test r*q ≈ a
                     @test a*(rqa\b) ≈ b atol=5000ε
                     @test Array(rqa) ≈ a
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * q ≈ Matrix(I, sq, sq) atol=5000ε
                     if eltya != Int
-                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        if VERSION < v"1.10-"
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
+                        else
+                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
+                        end
                         ac = copy(a)
                         # would need rectangular ldiv! method
                         @test_throws DimensionMismatch rq!(a[:, 1:5])\b == rq!(view(ac, :, 1:5))\b
@@ -165,7 +169,7 @@ const Our=MatrixFactorizations
     @testset "Issue 7304" begin
         A = [-√.5 -√.5; -√.5 √.5]
         Q = rq(A).Q
-        @test norm(A+Q) < eps()
+        @test norm(A+Matrix(Q)) < eps()
     end
 
     @testset "rq on AbstractVector" begin

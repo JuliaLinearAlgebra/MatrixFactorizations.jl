@@ -235,7 +235,7 @@ Base.propertynames(F::QL, private::Bool=false) =
 
 
 """
-    QLPackedQ <: AbstractMatrix
+    QLPackedQ <: LinearAlgebra.AbstractQ
 
 The orthogonal/unitary ``Q`` matrix of a QL factorization stored in [`QL`](@ref).
 """
@@ -254,8 +254,23 @@ function QLPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
 end
 
 QLPackedQ{T}(Q::QLPackedQ) where {T} = QLPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
-AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
-AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+AbstractQ{T}(Q::QLPackedQ{T}) where {T} = Q
+AbstractQ{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+convert(::Type{AbstractQ{T}}, Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+
+Matrix{T}(Q::QLPackedQ{S}) where {T,S} =
+    convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
+Matrix(Q::QLPackedQ{S}) where {S} = Matrix{S}(Q)
+
+if VERSION < v"1.10-"
+    AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
+    AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
+    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:QLPackedQ}) where {T} =
+        (QLPackedQ{T}(parent(adjQ)))'
+else
+    AbstractMatrix{T}(Q::QLPackedQ) where {T} = Matrix{T}(Q)
+end
 
 size(Q::QLPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 
@@ -266,7 +281,7 @@ size(F::QL) = size(getfield(F, :factors))
 ## Multiplication by Q
 function _mul(A::QLPackedQ, B::AbstractMatrix)
     TAB = promote_type(eltype(A), eltype(B))
-    Anew = convert(AbstractMatrix{TAB}, A)
+    Anew = convert(AbstractQtype{TAB}, A)
     if size(A.factors, 1) == size(B, 1)
         Bnew = copy_oftype(B, TAB)
     elseif size(A.factors, 2) == size(B, 1)
@@ -334,7 +349,7 @@ end
 function materialize!(M::Lmul{<:AdjQLPackedQLayout})
     adjA,B = M.A, M.B
     require_one_based_indexing(B)
-    A = adjA.parent
+    A = parent(adjA)
     mA, nA = size(A.factors)
     mB, nB = size(B,1), size(B,2)
     if mA != mB
@@ -392,7 +407,7 @@ end
 ### AQc
 function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout}) 
     A,adjQ = M.A, M.B    
-    Q = adjQ.parent
+    Q = parent(adjQ)
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
     if nA != mQ
