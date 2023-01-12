@@ -33,6 +33,9 @@ export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, choleskyinv!, choles
 const AdjointQtype = isdefined(LinearAlgebra, :AdjointQ) ? LinearAlgebra.AdjointQ : Adjoint
 const AbstractQtype = AbstractQ <: AbstractMatrix ? AbstractMatrix : AbstractQ
 
+const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ? LinearAlgebra.AdjointFactorization : Adjoint
+const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? LinearAlgebra.TransposeFactorization : Transpose
+
 # The abstract type LayoutQ implicitly assumes that any subtype admits a field
 # named factors. Based on this field, `size`, `axes` and context-dependent
 # multiplication work. The same used to be the case before v1.9 with the even

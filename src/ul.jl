@@ -80,8 +80,14 @@ Base.iterate(S::UL, ::Val{:L}) = (S.L, Val(:p))
 Base.iterate(S::UL, ::Val{:p}) = (S.p, Val(:done))
 Base.iterate(S::UL, ::Val{:done}) = nothing
 
-adjoint(F::UL) = Adjoint(F)
-transpose(F::UL) = Transpose(F)
+if isdefined(LinearAlgebra, :AdjointFactorization) # VERSION >= v"1.10-"
+    adjoint(F::UL{<:Real}) = LinearAlgebra.TransposeFactorization(F)
+    transpose(F::UL{<:Real}) = LinearAlgebra.TransposeFactorization(F)
+else
+    adjoint(F::UL) = Adjoint(F)
+    adjoint(F::UL{<:Real}) = Transpose(F)
+    transpose(F::UL) = Transpose(F)
+end
 
 # AbstractMatrix
 function ul!(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}} = Val(true);
@@ -379,46 +385,35 @@ function _swap_rows!(B::AbstractMatrix, i::Integer, j::Integer)
     B
 end
 
-function ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::AbstractVecOrMat)
+function ldiv!(A::UL, B::AbstractVecOrMat)
     _apply_ipiv_rows!(A, B)
     ArrayLayouts.ldiv!(LowerTriangular(A.factors), ArrayLayouts.ldiv!(UnitUpperTriangular(A.factors), B))
 end
 
-ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutVector) = Base.invoke(ldiv!, Tuple{UL{<:Any,<:AbstractMatrix},AbstractVecOrMat}, A, B)
-ldiv!(A::UL{<:Any,<:AbstractMatrix}, B::LayoutMatrix) = Base.invoke(ldiv!, Tuple{UL{<:Any,<:AbstractMatrix},AbstractVecOrMat}, A, B)
+ldiv!(A::UL, B::LayoutVector) = Base.invoke(ldiv!, Tuple{UL,AbstractVecOrMat}, A, B)
+ldiv!(A::UL, B::LayoutMatrix) = Base.invoke(ldiv!, Tuple{UL,AbstractVecOrMat}, A, B)
 
-function ldiv!(transA::Transpose{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
+function ldiv!(transA::TransposeFact{<:Any,<:UL}, B::AbstractVecOrMat)
     A = transA.parent
     ArrayLayouts.ldiv!(transpose(UnitUpperTriangular(A.factors)), ArrayLayouts.ldiv!(transpose(LowerTriangular(A.factors)), B))
     _apply_inverse_ipiv_rows!(A, B)
 end
 
-ldiv!(adjF::Adjoint{T,<:UL{T,<:AbstractMatrix}}, B::AbstractVecOrMat{T}) where {T<:Real} =
-    (F = adjF.parent; ldiv!(transpose(F), B))
-
-function ldiv!(adjA::Adjoint{<:Any,<:UL{<:Any,<:AbstractMatrix}}, B::AbstractVecOrMat)
+function ldiv!(adjA::AdjointFact{<:Any,<:UL}, B::AbstractVecOrMat)
     A = adjA.parent
     ArrayLayouts.ldiv!(adjoint(UnitUpperTriangular(A.factors)), ArrayLayouts.ldiv!(adjoint(LowerTriangular(A.factors)), B))
     _apply_inverse_ipiv_rows!(A, B)
 end
 
-(\)(A::Adjoint{<:Any,<:UL}, B::Adjoint{<:Any,<:AbstractVecOrMat}) = A \ copy(B)
-(\)(A::Transpose{<:Any,<:UL}, B::Transpose{<:Any,<:AbstractVecOrMat}) = A \ copy(B)
+(\)(F::AdjointFact{<:Any,<:UL}, B::AbstractVecOrMat) = ldiv!(F, copy_oftype(B, promote_type(eltype(F), eltype(B))))
+(\)(F::TransposeFact{<:Any,<:UL}, B::AbstractVecOrMat) = ldiv!(F, copy_oftype(B, promote_type(eltype(F), eltype(B))))
 
-function (/)(A::AbstractMatrix, F::Adjoint{<:Any,<:UL})
-    T = promote_type(eltype(A), eltype(F))
-    return adjoint(ldiv!(F.parent, copy_oftype(adjoint(A), T)))
-end
-# To avoid ambiguities with definitions in adjtrans.jl and factorizations.jl
-(/)(adjA::Adjoint{<:Any,<:AbstractVector}, F::Adjoint{<:Any,<:UL}) = adjoint(F.parent \ adjA.parent)
-(/)(adjA::Adjoint{<:Any,<:AbstractMatrix}, F::Adjoint{<:Any,<:UL}) = adjoint(F.parent \ adjA.parent)
-function (/)(trA::Transpose{<:Any,<:AbstractVector}, F::Adjoint{<:Any,<:UL})
-    T = promote_type(eltype(trA), eltype(F))
-    return adjoint(ldiv!(F.parent, conj!(AbstractVector{T}(trA.parent))))
-end
-function (/)(trA::Transpose{<:Any,<:AbstractMatrix}, F::Adjoint{<:Any,<:UL})
-    T = promote_type(eltype(trA), eltype(F))
-    return adjoint(ldiv!(F.parent, conj!(AbstractMatrix{T}(trA.parent))))
+(/)(A::AbstractMatrix, F::AdjointFact{<:Any,<:UL}) = adjoint(adjoint(F) \ adjoint(A))
+(/)(A::AbstractMatrix, F::TransposeFact{<:Any,<:UL}) = transpose(transpose(F) \ transpose(A))
+
+if VERSION < v"1.10-" # disambiguation
+    (/)(A::Adjoint{<:Any,<:AbstractVector}, F::TransposeFact{<:Any,<:UL{<:Real}}) = transpose(transpose(F) \ transpose(A))
+    (/)(A::Transpose{<:Any,<:AbstractVector}, F::TransposeFact{<:Any,<:UL{<:Real}}) = transpose(transpose(F) \ transpose(A))
 end
 
 function det(F::UL{T}) where T
@@ -679,8 +674,8 @@ end
 # end
 
 rdiv!(B::AbstractMatrix, A::UL) = transpose(ldiv!(transpose(A), transpose(B)))
-rdiv!(B::AbstractMatrix, A::Transpose{<:Any,<:UL}) = transpose(ldiv!(A.parent, transpose(B)))
-rdiv!(B::AbstractMatrix, A::Adjoint{<:Any,<:UL}) = adjoint(ldiv!(A.parent, adjoint(B)))
+rdiv!(B::AbstractMatrix, A::TransposeFact{<:Any,<:UL}) = transpose(ldiv!(A.parent, transpose(B)))
+rdiv!(B::AbstractMatrix, A::AdjointFact{<:Any,<:UL}) = adjoint(ldiv!(A.parent, adjoint(B)))
 
 # Conversions
 AbstractMatrix(F::UL) = (F.L * F.U)[invperm(F.p),:]
