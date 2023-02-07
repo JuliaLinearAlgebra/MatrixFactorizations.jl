@@ -122,8 +122,11 @@ axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQ) = Q
 Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
 # by default, fall back to AbstractQ  methods
-layout_getindex(A::LayoutQ, I...) =
+_layout_getindex(A::LayoutQ, I...) =
     Base.invoke(Base.getindex, Tuple{AbstractQ, typeof.(I)...}, A, I...)
+layout_getindex(A::LayoutQ, I...) = _layout_getindex(A, I...)
+# disambiguate with ArrayLayouts
+layout_getindex(A::LayoutQ, I::Int...) = _layout_getindex(A, I...)
 
 size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
