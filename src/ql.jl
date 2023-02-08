@@ -28,8 +28,8 @@ The object has two fields:
   - The lower triangular part contains the elements of ``L``, that is `L =
     tril(F.factors)` for a `QL` object `F`.
 
-  - The subdiagonal part contains the reflectors ``v_i`` stored in a packed format where
-    ``v_i`` is the ``i``th column of the matrix `V = I + tril(F.factors, -1)`.
+  - The superdiagonal part contains the reflectors ``v_i`` stored in a packed format where
+    ``v_i`` is the ``i``th column of the matrix `V = I + triu(F.factors, 1)`.
 
 * `τ` is a vector  of length `min(m,n)` containing the coefficients ``\tau_i``.
 
