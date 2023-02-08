@@ -92,6 +92,8 @@ const Our=MatrixFactorizations
                     @inferred rq(a)
                     q, r  = rqa.Q, rqa.R
                     @test_throws ErrorException rqa.Z
+                    @test q[1,1] ≈ Matrix(q)[1,1]
+                    @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test q'*q ≈ Matrix(I, a_1, a_1)
                     @test q*q' ≈ Matrix(I, a_1, a_1)
                     @test q'*Matrix(1.0I, a_1, a_1)' ≈ Matrix(q')

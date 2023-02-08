@@ -74,6 +74,8 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
                     @inferred qrunblocked(a)
                     q, r = qra.Q, qra.R
                     @test_throws ErrorException qra.Z
+                    @test q[1,1] ≈ Matrix(q)[1,1]
+                    @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
                     @test q*squareQ(q)' ≈ Matrix(I, a_1, a_1)
                     @test q'*Matrix(1.0I, a_1, a_1)' ≈ squareQ(q)'
@@ -103,6 +105,8 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
                     @inferred qrunblocked(a[:, 1:n1], Val(false))
                     q,r   = qra.Q, qra.R
                     @test_throws ErrorException qra.Z
+                    @test q[1,1] ≈ Matrix(q)[1,1]
+                    @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
                     @test q'*rectangularQ(q) ≈ Matrix(I, a_1, n1)
                     @test q*r ≈ a[:, 1:n1]
@@ -127,6 +131,8 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
 
                     qra = qrunblocked(a[:,1:n1], Val(false))
                     q, r = qra.Q, qra.R
+                    @test q[1,1] ≈ Matrix(q)[1,1]
+                    @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test rmul!(copy(squareQ(q)'), q) ≈ Matrix(I, n, n)
                     @test_throws DimensionMismatch rmul!(Matrix{eltya}(I, n+1, n+1),q)
                     @test rmul!(squareQ(q), adjoint(q)) ≈ Matrix(I, n, n)
