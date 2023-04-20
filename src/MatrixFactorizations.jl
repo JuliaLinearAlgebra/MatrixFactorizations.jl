@@ -28,7 +28,7 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
 
 
 
-export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, choleskyinv!, choleskyinv
+export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL
 
 const AdjointQtype = isdefined(LinearAlgebra, :AdjointQ) ? LinearAlgebra.AdjointQ : Adjoint
 const AbstractQtype = AbstractQ <: AbstractMatrix ? AbstractMatrix : AbstractQ
@@ -136,7 +136,6 @@ include("ul.jl")
 include("qr.jl")
 include("ql.jl")
 include("rq.jl")
-include("choleskyinv.jl")
 include("polar.jl")
 
 end #module
