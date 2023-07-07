@@ -469,3 +469,4 @@ end
 
 
 include("test_polar.jl")
+include("test_reversecholesky.jl")
