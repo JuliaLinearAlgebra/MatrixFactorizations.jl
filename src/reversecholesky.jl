@@ -88,10 +88,11 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{LowerTriangular})
             AkkInv = inv(copy(Akk'))
             for j = 1:k-1
                 for i = k+1:n
-                    A[k,j] -= A[i,k]*A[i,j]'
+                    A[k,j] -= A[i,k]'*A[i,j]
                 end
                 A[k,j] = AkkInv*A[k,j]
             end
+        end
     end
     return UpperTriangular(A), convert(BlasInt, 0)
 end
@@ -129,9 +130,6 @@ function reversecholesky!(A::AbstractMatrix, ::NoPivot = NoPivot(); check::Bool 
         return reversecholesky!(Hermitian(A), NoPivot(); check = check)
     end
 end
-@deprecate reversecholesky!(A::StridedMatrix, ::Val{false}; check::Bool = true) reversecholesky!(A, NoPivot(); check) false
-@deprecate reversecholesky!(A::RealHermSymComplexHerm, ::Val{false}; check::Bool = true) reversecholesky!(A, NoPivot(); check) false
-
 
 # reversecholesky. Non-destructive methods for computing ReverseCholesky factorization of real symmetric
 # or Hermitian matrix
@@ -250,3 +248,15 @@ end
 
 
 logabsdet(C::ReverseCholesky) = logdet(C), one(eltype(C)) # since C is p.s.d.
+
+
+function getproperty(C::ReverseCholesky{<:Any,<:Diagonal}, d::Symbol)
+    Cfactors = getfield(C, :factors)
+    if d in (:U, :L, :UL)
+        return Cfactors
+    else
+        return getfield(C, d)
+    end
+end
+
+inv(C::ReverseCholesky{<:Any,<:Diagonal}) = Diagonal(map(inv∘abs2, C.factors.diag))

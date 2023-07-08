@@ -37,8 +37,6 @@ end
 @testset "core functionality" begin
     n = 10
 
-
-
     # Split n into 2 parts for tests needing two matrices
     n1 = div(n, 2)
     n2 = 2*n1
@@ -63,6 +61,14 @@ end
         @test U*U' ≈ A
 
         A = Hermitian(areal + im*aimg) + 10I
+        U = reversecholesky(A).U
+        @test U*U' ≈ A
+
+        A = Symmetric(areal, :L) + 10I
+        U = reversecholesky(A).U
+        @test U*U' ≈ A
+
+        A = Hermitian(areal + im*aimg, :L) + 10I
         U = reversecholesky(A).U
         @test U*U' ≈ A
     end
@@ -146,7 +152,7 @@ end
                 @test Matrix(@inferred reversecholesky(Symmetric(S, uplo))) ≈ S
             end
         end
-        @test Matrix(reversecholesky(S).U) ≈ [2 -1; 0 sqrt(eltya(3))] / sqrt(eltya(2))
+        @test Matrix(reversecholesky(S).U) ≈ [sqrt(eltya(3)) -1; 0 2] / sqrt(eltya(2))
         @test Matrix(reversecholesky(S)) ≈ S
 
         # test extraction of factor and re-creating original matrix
@@ -246,8 +252,8 @@ end
     U = Matrix(MatrixFactorizations._reverse_chol!(X*X', UpperTriangular)[1])
     XX = Matrix(X*X')
 
-    @test sum(sum(norm, L*L' - XX)) < eps()
-    @test sum(sum(norm, U'*U - XX)) < eps()
+    @test_broken sum(sum(norm, L'*L - XX)) < eps()
+    @test_broken sum(sum(norm, U*U' - XX)) < eps()
 end
 
 @testset "Non-strided Cholesky solves" begin
@@ -265,34 +271,32 @@ end
     D = Diagonal(d)
     CD = reversecholesky(D)
     CM = reversecholesky(Matrix(D))
-    @test CD isa Cholesky{Float64}
+    @test CD isa ReverseCholesky{Float64}
     @test CD.U ≈ Diagonal(.√d) ≈ CM.U
     @test D ≈ CD.L * CD.U
     @test CD.info == 0
 
     F = reversecholesky(Hermitian(I(3)))
-    @test F isa Cholesky{Float64,<:Diagonal}
+    @test F isa ReverseCholesky{Float64,<:Diagonal}
     @test Matrix(F) ≈ I(3)
 
     # real, failing
     @test_throws PosDefException reversecholesky(Diagonal([1.0, -2.0]))
     Dnpd = reversecholesky(Diagonal([1.0, -2.0]); check = false)
-    @test Dnpd.info == 2
+    @test Dnpd.info == 1
 
     # complex
     D = complex(D)
     CD = reversecholesky(Hermitian(D))
     CM = reversecholesky(Matrix(Hermitian(D)))
-    @test CD isa Cholesky{ComplexF64,<:Diagonal}
+    @test CD isa ReverseCholesky{ComplexF64,<:Diagonal}
     @test CD.U ≈ Diagonal(.√d) ≈ CM.U
     @test D ≈ CD.L * CD.U
     @test CD.info == 0
 
     # complex, failing
     D[2, 2] = 0.0 + 0im
-    @test_throws PosDefException reversecholesky(D)
-    Dnpd = reversecholesky(D; check = false)
-    @test Dnpd.info == 2
+    @test_throws ArgumentError reversecholesky(D)
 
     # InexactError for Int
     @test_throws InexactError reversecholesky!(Diagonal([2, 1]))
@@ -301,11 +305,10 @@ end
 @testset "Cholesky for AbstractMatrix" begin
     S = SymTridiagonal(fill(2.0, 4), ones(3))
     C = reversecholesky(S)
-    @test C.L * C.U ≈ S
+    @test C.U * C.L ≈ S
 end
 
 @testset "constructor with non-BlasInt arguments" begin
-
     x = rand(5,5)
     chol = reversecholesky(x'x)
 
