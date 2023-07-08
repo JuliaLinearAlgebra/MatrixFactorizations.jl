@@ -440,3 +440,4 @@ end
 
 include("test_rq.jl")
 include("test_polar.jl")
+include("test_reversecholesky.jl")
