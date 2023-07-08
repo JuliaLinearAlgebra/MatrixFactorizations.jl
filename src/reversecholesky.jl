@@ -45,8 +45,10 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
     realdiag = eltype(A) <: Complex
     @inbounds begin
         for k = n:-1:1
+            cs = colsupport(A, k)
+            a,b = first(cs),last(cs)
             Akk = realdiag ? real(A[k,k]) : A[k,k]
-            for j = k+1:n
+            for j = max(a,k+1):min(n,b)
                 Akk -= realdiag ? abs2(A[k,j]) : A[k,j]'A[k,j]
             end
             A[k,k] = Akk
@@ -56,12 +58,12 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
             end
             A[k,k] = Akk
             AkkInv = inv(Akk)
-            for j = k+1:n
-                @simd for i = 1:k-1
+            for j = (k+1:n) ∩ rowsupport(A, k)
+                @simd for i = (1:k-1) ∩ colsupport(A,j)
                     A[i,k] -= A[i,j]*A[k,j]'
                 end
             end
-            for i = 1:k-1
+            for i = (1:k-1) ∩ cs
                 A[i,k] *= AkkInv'
             end
         end
@@ -131,6 +133,8 @@ function reversecholesky!(A::AbstractMatrix, ::NoPivot = NoPivot(); check::Bool 
     end
 end
 
+reversecholcopy(A) = cholcopy(A)
+
 # reversecholesky. Non-destructive methods for computing ReverseCholesky factorization of real symmetric
 # or Hermitian matrix
 ## No pivoting (default)
@@ -145,10 +149,10 @@ The triangular ReverseCholesky factor can be obtained from the factorization `F`
 where `A ≈ F.U * F.U' ≈ F.L' * F.L`.
 """
 reversecholesky(A::AbstractMatrix, ::NoPivot=NoPivot(); check::Bool = true) =
-    reversecholesky!(cholcopy(A); check)
+    reversecholesky!(reversecholcopy(A); check)
 
 function reversecholesky(A::AbstractMatrix{Float16}, ::NoPivot=NoPivot(); check::Bool = true)
-    X = reversecholesky!(cholcopy(A); check = check)
+    X = reversecholesky!(reversecholcopy(A); check = check)
     return ReverseCholesky{Float16}(X)
 end
 
