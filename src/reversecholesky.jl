@@ -46,9 +46,9 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
     @inbounds begin
         for k = n:-1:1
             cs = colsupport(A, k)
-            a,b = first(cs),last(cs)
+            rs = rowsupport(A, k)
             Akk = realdiag ? real(A[k,k]) : A[k,k]
-            for j = max(a,k+1):min(n,b)
+            for j = (k+1:n) ∩ rs
                 Akk -= realdiag ? abs2(A[k,j]) : A[k,j]'A[k,j]
             end
             A[k,k] = Akk
@@ -58,8 +58,8 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
             end
             A[k,k] = Akk
             AkkInv = inv(Akk)
-            for j = (k+1:n) ∩ rowsupport(A, k)
-                @simd for i = (1:k-1) ∩ colsupport(A,j)
+            for j = (k+1:n) ∩ rs
+                @simd for i = (1:k-1) ∩ cs ∩ colsupport(A,j)
                     A[i,k] -= A[i,j]*A[k,j]'
                 end
             end
@@ -77,8 +77,10 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{LowerTriangular})
     realdiag = eltype(A) <: Complex
     @inbounds begin
         for k = n:-1:1
+            cs = colsupport(A, k)
+            rs = rowsupport(A, k)
             Akk = realdiag ? real(A[k,k]) : A[k,k]
-            for i = k+1:n
+            for i = (k+1:n) ∩ cs
                 Akk -= realdiag ? abs2(A[i,k]) : A[i,k]'A[i,k]
             end
             A[k,k] = Akk
@@ -88,8 +90,8 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{LowerTriangular})
             end
             A[k,k] = Akk
             AkkInv = inv(copy(Akk'))
-            for j = 1:k-1
-                for i = k+1:n
+            for j = (1:k-1) ∩ rs # colsupport == rowsupport
+                for i = (k+1:n) ∩ cs ∩ colsupport(A,j)
                     A[k,j] -= A[i,k]'*A[i,j]
                 end
                 A[k,j] = AkkInv*A[k,j]
@@ -134,6 +136,10 @@ function reversecholesky!(A::AbstractMatrix, ::NoPivot = NoPivot(); check::Bool 
 end
 
 reversecholcopy(A) = cholcopy(A)
+function reversecholcopy(A::SymTridiagonal)
+    T = LinearAlgebra.choltype(A)
+    Symmetric(Bidiagonal(AbstractVector{T}(A.dv), AbstractVector{T}(A.ev), :U))
+end
 
 # reversecholesky. Non-destructive methods for computing ReverseCholesky factorization of real symmetric
 # or Hermitian matrix
@@ -257,6 +263,24 @@ logabsdet(C::ReverseCholesky) = logdet(C), one(eltype(C)) # since C is p.s.d.
 function getproperty(C::ReverseCholesky{<:Any,<:Diagonal}, d::Symbol)
     Cfactors = getfield(C, :factors)
     if d in (:U, :L, :UL)
+        return Cfactors
+    else
+        return getfield(C, d)
+    end
+end
+
+function getproperty(C::ReverseCholesky{<:Any, <:Bidiagonal}, d::Symbol)
+    Cfactors = getfield(C, :factors)
+    Cuplo    = getfield(C, :uplo)
+    if d === :U && Cfactors.uplo === Cuplo === 'U'
+        return Cfactors
+    elseif d === :L && Cfactors.uplo === Cuplo === 'U'
+        return Cfactors'
+    elseif d === :U && Cfactors.uplo === Cuplo === 'L'
+            return Cfactors'
+        elseif d === :L && Cfactors.uplo === Cuplo === 'L'
+            return Cfactors
+    elseif d === :UL
         return Cfactors
     else
         return getfield(C, d)

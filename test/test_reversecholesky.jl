@@ -297,7 +297,8 @@ end
 
         # complex, failing
         D[2, 2] = 0.0 + 0im
-        @test_throws ArgumentError reversecholesky(D)
+        @test reversecholesky(D).U ≈ sqrt.(D)
+        
 
         # InexactError for Int
         @test_throws InexactError reversecholesky!(Diagonal([2, 1]))
@@ -318,8 +319,6 @@ end
         @test ReverseCholesky(factors, uplo, Int32(info)) == chol
         @test ReverseCholesky(factors, uplo, Int64(info)) == chol
     end
-
-
 
     @testset "issue #37356, diagonal elements of hermitian generic matrix" begin
         B = Hermitian(hcat([one(BigFloat) + im]))
@@ -366,5 +365,17 @@ end
         @test B.L ≈ B32.L
         @test B.UL ≈ B32.UL
         @test Matrix(B) ≈ A
+    end
+
+    @testset "large Sparse" begin
+        n = 1_000_000
+        A = SymTridiagonal(fill(4,n), fill(1,n-1))
+        R = reversecholesky(A)
+        @test R isa ReverseCholesky{Float64, <:Bidiagonal}
+        @test R.U isa Bidiagonal
+        @test R.L isa Bidiagonal
+        @test R.UL isa Bidiagonal
+        # Bidiagonal multiplication not supported
+        @test R.U*(R.U' * [1; zeros(n-1)]) ≈ A[:,1]
     end
 end
