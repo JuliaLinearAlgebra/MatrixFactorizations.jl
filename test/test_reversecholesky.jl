@@ -396,6 +396,11 @@ end
         R = reversecholesky(Symmetric(A,:L))
         @test R.U * (R.U' * [1; zeros(n-1)]) ≈ A[:,1]
         @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[:,1]
+
+        A = Bidiagonal(fill(4,n), fill(1,n-1), :L)
+        R = reversecholesky(Symmetric(A,:L))
+        @test R.U * (R.U' * [1; zeros(n-1)]) ≈ A[:,1]
+        @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[:,1]
     end
 
     @testset "coverage" begin
