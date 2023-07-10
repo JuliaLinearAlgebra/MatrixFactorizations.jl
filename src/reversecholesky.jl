@@ -299,10 +299,6 @@ function getproperty(C::ReverseCholesky{<:Any, <:Bidiagonal}, d::Symbol)
             return Cfactors'
     elseif d === :L && Cuplo === 'L'
             return Cfactors
-    elseif d === :U && Cuplo === 'L'
-            return Cfactors'
-    elseif d === :L && Cuplo === 'L'
-            return Cfactors
     elseif d === :UL
         return Cfactors
     else
