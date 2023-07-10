@@ -34,8 +34,8 @@ ReverseCholesky(U::UpperTriangular{T}) where {T} = ReverseCholesky{T,typeof(U.da
 ReverseCholesky(L::LowerTriangular{T}) where {T} = ReverseCholesky{T,typeof(L.data)}(L.data, 'L', 0)
 
 # iteration for destructuring into components
-Base.iterate(C::ReverseCholesky) = (C.L, Val(:U))
-Base.iterate(C::ReverseCholesky, ::Val{:U}) = (C.U, Val(:done))
+Base.iterate(C::ReverseCholesky) = (C.U, Val(:U))
+Base.iterate(C::ReverseCholesky, ::Val{:U}) = (C.L, Val(:done))
 Base.iterate(C::ReverseCholesky, ::Val{:done}) = nothing
 
 ## Non BLAS/LAPACK element types (generic)
@@ -139,6 +139,24 @@ reversecholcopy(A) = cholcopy(A)
 function reversecholcopy(A::SymTridiagonal)
     T = LinearAlgebra.choltype(A)
     Symmetric(Bidiagonal(AbstractVector{T}(A.dv), AbstractVector{T}(A.ev), :U))
+end
+
+function reversecholcopy(A::Symmetric{<:Any,<:Tridiagonal})
+    T = LinearAlgebra.choltype(A)
+    if A.uplo == 'U'
+        Symmetric(Bidiagonal(AbstractVector{T}(parent(A).d), AbstractVector{T}(parent(A).du), :U))
+    else
+        Symmetric(Bidiagonal(AbstractVector{T}(parent(A).d), AbstractVector{T}(parent(A).dl), :L), :L)
+    end
+end
+
+_copyifsametype(::Type{T}, A::AbstractMatrix{T}) where T = copy(A)
+_copyifsametype(_, A) = A
+
+function reversecholcopy(A::Symmetric{<:Any,<:Bidiagonal})
+    T = LinearAlgebra.choltype(A)
+    B = _copyifsametype(T, AbstractMatrix{T}(parent(A)))
+    Symmetric{T,typeof(B)}(B, A.uplo)
 end
 
 # reversecholesky. Non-destructive methods for computing ReverseCholesky factorization of real symmetric
