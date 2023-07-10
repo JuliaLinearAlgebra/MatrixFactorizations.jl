@@ -290,13 +290,18 @@ end
 function getproperty(C::ReverseCholesky{<:Any, <:Bidiagonal}, d::Symbol)
     Cfactors = getfield(C, :factors)
     Cuplo    = getfield(C, :uplo)
-    if d === :U && Cfactors.uplo === Cuplo === 'U'
+    @assert Cfactors.uplo === Cuplo
+    if d === :U && Cuplo === 'U'
         return Cfactors
-    elseif d === :L && Cfactors.uplo === Cuplo === 'U'
+    elseif d === :L && Cuplo === 'U'
         return Cfactors'
-    elseif d === :U && Cfactors.uplo === Cuplo === 'L'
+    elseif d === :U && Cuplo === 'L'
             return Cfactors'
-        elseif d === :L && Cfactors.uplo === Cuplo === 'L'
+    elseif d === :L && Cuplo === 'L'
+            return Cfactors
+    elseif d === :U && Cuplo === 'L'
+            return Cfactors'
+    elseif d === :L && Cuplo === 'L'
             return Cfactors
     elseif d === :UL
         return Cfactors

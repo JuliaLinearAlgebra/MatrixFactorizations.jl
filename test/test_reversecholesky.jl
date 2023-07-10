@@ -377,22 +377,25 @@ end
         @test R.UL isa Bidiagonal
         # Bidiagonal multiplication not supported
         @test R.U*(R.U' * [1; zeros(n-1)]) ≈ A[:,1]
+        @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[:,1]
 
         A = Tridiagonal(fill(1.0,n-1), fill(4.0,n), fill(1/2,n-1))
         R = reversecholesky(Symmetric(A))
         @test R.U*(R.U' * [1; zeros(n-1)]) ≈ A[1,:]
+        @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[1,:]
         R = reversecholesky(Symmetric(A,:L))
         @test R.U*(R.U' * [1; zeros(n-1)]) ≈ A[:,1]
+        @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[:,1]
 
         A = Bidiagonal(fill(4.0,n), fill(1.0,n-1), :U)
         R = reversecholesky(Symmetric(A))
         @test R.U*(R.U' * [1; zeros(n-1)]) ≈ A[1,:]
-        R = reversecholesky(Symmetric(A,:L))
-        @test R.U*(R.U' * [1; zeros(n-1)]) ≈ A[:,1]
+        @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[1,:]
 
         A = Bidiagonal(fill(4.0,n), fill(1.0,n-1), :L)
         R = reversecholesky(Symmetric(A,:L))
         @test R.U * (R.U' * [1; zeros(n-1)]) ≈ A[:,1]
+        @test R.L'*(R.L * [1; zeros(n-1)]) ≈ A[:,1]
     end
 
     @testset "coverage" begin
