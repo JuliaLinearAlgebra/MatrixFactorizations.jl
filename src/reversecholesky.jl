@@ -57,12 +57,13 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
                 return UpperTriangular(A), info
             end
             A[k,k] = Akk
-            AkkInv = inv(Akk)
             for j = (k+1:n) ∩ rs
+                Akj = A[k,j]'
                 @simd for i = (1:k-1) ∩ cs ∩ colsupport(A,j)
-                    A[i,k] -= A[i,j]*A[k,j]'
+                    A[i,k] -= A[i,j]*Akj
                 end
             end
+            AkkInv = inv(Akk)
             for i = (1:k-1) ∩ cs
                 A[i,k] *= AkkInv'
             end
