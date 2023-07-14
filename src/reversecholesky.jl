@@ -139,24 +139,22 @@ end
 reversecholcopy(A) = cholcopy(A)
 function reversecholcopy(A::SymTridiagonal)
     T = LinearAlgebra.choltype(A)
-    Symmetric(Bidiagonal(AbstractVector{T}(A.dv), AbstractVector{T}(A.ev), :U))
+    Symmetric(Bidiagonal(copymutable_oftype(A.dv, T), copymutable_oftype(A.ev, T), :U))
 end
 
 function reversecholcopy(A::Symmetric{<:Any,<:Tridiagonal})
     T = LinearAlgebra.choltype(A)
     if A.uplo == 'U'
-        Symmetric(Bidiagonal(AbstractVector{T}(parent(A).d), AbstractVector{T}(parent(A).du), :U))
+        Symmetric(Bidiagonal(copymutable_oftype(parent(A).d, T), copymutable_oftype(parent(A).du, T), :U))
     else
-        Symmetric(Bidiagonal(AbstractVector{T}(parent(A).d), AbstractVector{T}(parent(A).dl), :L), :L)
+        Symmetric(Bidiagonal(copymutable_oftype(parent(A).d, T), copymutable_oftype(parent(A).dl, T), :L), :L)
     end
 end
 
-_copyifsametype(::Type{T}, A::AbstractMatrix{T}) where T = copy(A)
-_copyifsametype(_, A) = A
 
 function reversecholcopy(A::Symmetric{<:Any,<:Bidiagonal})
     T = LinearAlgebra.choltype(A)
-    B = _copyifsametype(T, AbstractMatrix{T}(parent(A)))
+    B = copymutable_oftype(parent(A), T)
     Symmetric{T,typeof(B)}(B, A.uplo)
 end
 

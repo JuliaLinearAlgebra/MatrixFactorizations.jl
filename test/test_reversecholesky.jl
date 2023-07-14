@@ -3,6 +3,7 @@
 using Test, LinearAlgebra, Random, MatrixFactorizations
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, QRPivoted,
     PosDefException, RankDeficientException, chkfullrank
+using ArrayLayouts: Fill
 
 function unary_ops_tests(a, ca, tol; n=size(a, 1))
     @test inv(ca)*a ≈ Matrix(I, n, n)
@@ -411,5 +412,12 @@ end
         @test U*U' ≈ A
         @test reversecholesky(5).U[1,1] ≈ sqrt(5)
         @test propertynames(R) == (:U, :L, :UL)
+    end
+
+    @testset "Lazy reversecholesky" begin
+        A = SymTridiagonal(Fill(2,10), Fill(1,9))
+        @test reversecholesky(A) == reversecholesky(SymTridiagonal(fill(2.0,10), fill(1.0,9))) == 
+                reversecholesky(Symmetric(Bidiagonal(Fill(2,10), Fill(1,9), :U))) ==
+                reversecholesky(Symmetric(Tridiagonal(Fill(3,9), Fill(2,10), Fill(1,9))))
     end
 end
