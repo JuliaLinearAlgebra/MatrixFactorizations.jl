@@ -50,6 +50,9 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
 
+LinearAlgebra.copymutable(Q::LayoutQ) = copymutable_size(size(Q), Q)
+copymutable_size(sz, Q) = lmul!(Q, Matrix{eltype(Q)}(I, sz))
+
 (*)(Q::LayoutQ, b::AbstractVector) = _mul(Q, b)
 (*)(Q::LayoutQ, b::LayoutVector) = ArrayLayouts.mul(Q, b) # disambiguation w/ ArrayLayouts.jl
 function _mul(Q::LayoutQ, b::AbstractVector)

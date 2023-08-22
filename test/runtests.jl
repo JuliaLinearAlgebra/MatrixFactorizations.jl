@@ -436,6 +436,14 @@ end
         @test Q' * LowerTriangular(L) ≈ Q' * L
         @test LowerTriangular(L)' * Q' ≈ A'
     end
+
+    @testset "row/col slices via copymutable" begin
+        n = 5
+        A = randn(n,n)
+        Q, L = ql(A)
+        @test Q[2,3:4] == [Q[2,k] for k=3:4]
+        @test Q[3:4,2] == [Q[k,2] for k=3:4]
+    end
 end
 
 include("test_rq.jl")
