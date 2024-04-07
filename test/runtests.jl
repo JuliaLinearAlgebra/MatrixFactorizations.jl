@@ -444,6 +444,11 @@ end
         @test Q[2,3:4] == [Q[2,k] for k=3:4]
         @test Q[3:4,2] == [Q[k,2] for k=3:4]
     end
+
+    @testset "Q * Q" begin
+        Q = ql(randn(5,5)).Q
+        @test Q*Q ≈ Matrix(Q)^2
+    end
 end
 
 include("test_rq.jl")
