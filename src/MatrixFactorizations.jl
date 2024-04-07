@@ -67,6 +67,7 @@ function _mul(Q::LayoutQ, b::AbstractVector)
    lmul!(convert(AbstractQtype{T}, Q), bnew)
 end
 (*)(Q::LayoutQ, B::AbstractMatrix) = _mul(Q, B)
+(*)(Q::LayoutQ, B::LayoutQ) = ArrayLayouts.mul(Q, B)
 (*)(Q::LayoutQ, B::LayoutMatrix) = ArrayLayouts.mul(Q, B) # disambiguation w/ ArrayLayouts.jl
 function _mul(Q::LayoutQ, B::AbstractMatrix)
    T = promote_type(eltype(Q), eltype(B))
