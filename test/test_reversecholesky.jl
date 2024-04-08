@@ -298,7 +298,9 @@ end
 
         # complex, failing
         D[2, 2] = 0.0 + 0im
-        @test reversecholesky(D).U ≈ sqrt.(D)
+        if VERSION ≥ v"1.10"
+            @test_throws PosDefException reversecholesky(D)
+        end
         
 
         # InexactError for Int
