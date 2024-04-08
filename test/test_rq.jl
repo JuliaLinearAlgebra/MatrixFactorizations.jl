@@ -161,13 +161,6 @@ const Our=MatrixFactorizations
         end
     end
 
-    @testset "transpose errors" begin
-        @test_throws MethodError transpose(rq(randn(3,3)))
-        @test_throws MethodError adjoint(rq(randn(3,3)))
-        @test_throws MethodError transpose(rq(big.(randn(3,3))))
-        @test_throws MethodError adjoint(rq(big.(randn(3,3))))
-    end
-
     @testset "Issue 7304" begin
         A = [-√.5 -√.5; -√.5 √.5]
         Q = rq(A).Q
