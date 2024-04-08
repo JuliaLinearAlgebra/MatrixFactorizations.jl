@@ -298,7 +298,7 @@ end
 
         # complex, failing
         D[2, 2] = 0.0 + 0im
-        @test reversecholesky(D).U ≈ sqrt.(D)
+        @test_throws PosDefException reversecholesky(D)
         
 
         # InexactError for Int
