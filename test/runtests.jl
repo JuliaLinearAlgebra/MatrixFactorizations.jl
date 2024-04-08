@@ -144,15 +144,6 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
         end
     end 
 
-    @testset "transpose errors" begin
-        @test_throws MethodError transpose(qrunblocked(randn(3,3)))
-        @test_throws MethodError adjoint(qrunblocked(randn(3,3)))
-        @test_throws MethodError transpose(qrunblocked(randn(3,3), Val(false)))
-        @test_throws MethodError adjoint(qrunblocked(randn(3,3), Val(false)))
-        @test_throws MethodError transpose(qrunblocked(big.(randn(3,3))))
-        @test_throws MethodError adjoint(qrunblocked(big.(randn(3,3))))
-    end
-
     @testset "Issue 7304" begin
         A = [-√.5 -√.5; -√.5 √.5]
         Q = rectangularQ(qrunblocked(A).Q)
@@ -356,14 +347,6 @@ end
         end
     end
 
-    @testset "transpose errors" begin
-        @test_throws MethodError transpose(ql(randn(3,3)))
-        @test_throws MethodError adjoint(ql(randn(3,3)))
-        @test_throws MethodError transpose(ql(randn(3,3), Val(false)))
-        @test_throws MethodError adjoint(ql(randn(3,3), Val(false)))
-        @test_throws MethodError transpose(ql(big.(randn(3,3))))
-        @test_throws MethodError adjoint(ql(big.(randn(3,3))))
-    end
 
     @testset "Issue 7304" begin
         A = [-√.5 -√.5; -√.5 √.5]

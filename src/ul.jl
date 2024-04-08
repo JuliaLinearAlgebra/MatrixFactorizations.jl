@@ -410,11 +410,11 @@ end
 
 (/)(A::AbstractMatrix, F::AdjointFact{<:Any,<:UL}) = adjoint(adjoint(F) \ adjoint(A))
 (/)(A::AbstractMatrix, F::TransposeFact{<:Any,<:UL}) = transpose(transpose(F) \ transpose(A))
+(/)(A::Union{Matrix{Complex{T}},AdjOrTrans{Complex{T},Vector{Complex{T}}}}, F::TransposeFactorization{T,<:UL}) where {T<:BlasReal} =
+    transpose(transpose(F) \ transpose(A))
+(/)(B::Transpose{Complex{T},Vector{Complex{T}}}, F::TransposeFactorization{T,<:UL}) where {T<:BlasReal} =
+    transpose(transpose(F) \ transpose(B))
 
-if VERSION < v"1.10-" # disambiguation
-    (/)(A::Adjoint{<:Any,<:AbstractVector}, F::TransposeFact{<:Any,<:UL{<:Real}}) = transpose(transpose(F) \ transpose(A))
-    (/)(A::Transpose{<:Any,<:AbstractVector}, F::TransposeFact{<:Any,<:UL{<:Real}}) = transpose(transpose(F) \ transpose(A))
-end
 
 function det(F::UL{T}) where T
     n = checksquare(F)

@@ -151,10 +151,13 @@ function reversecholcopy(A::Symmetric{<:Any,<:Tridiagonal})
     end
 end
 
+# Needed to work around O(n^2) copyto! in Base
+_copymutable_oftype(B::Bidiagonal, ::Type{T}) where T =
+    Bidiagonal(copymutable_oftype(B.dv, T), copymutable_oftype(B.ev, T), B.uplo)
 
 function reversecholcopy(A::Symmetric{<:Any,<:Bidiagonal})
     T = LinearAlgebra.choltype(A)
-    B = copymutable_oftype(parent(A), T)
+    B = _copymutable_oftype(parent(A), T)
     Symmetric{T,typeof(B)}(B, A.uplo)
 end
 
