@@ -10,8 +10,15 @@ import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!
    chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
    AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare,
    checknonsingular, ipiv2perm, copytri!, issuccess, RealHermSymComplexHerm,
-   cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype,
-   TransposeFactorization
+   cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype
+
+if VERSION ≥ v"1.10-"
+    using LinearAlgebra: TransposeFactorization, AdjointFactorization
+else
+    const TransposeFactorization = Transpose
+    const AdjointFactorization = Adjoint
+
+end
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
    >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
@@ -121,8 +128,6 @@ if VERSION < v"1.10-"
     Base.@propagate_inbounds layout_getindex(A::LayoutQ, I::AbstractVector{Int}, J::AbstractVector{Int}) =
         hcat((A[:, j][I] for j in J)...)
 
-
-    (*)(Q::LayoutQ, P::LayoutQ) = mul(Q, P)
     (*)(Q::LayoutQ, adjQ::Adjoint{<:Any,<:LayoutQ}) = mul(Q, adjQ)
     (*)(adjQ::Adjoint{<:Any,<:LayoutQ}, Q::LayoutQ) = mul(adjQ, Q)
     (*)(adjQ::Adjoint{<:Any,<:LayoutQ}, adjP::Adjoint{<:Any,<:LayoutQ}) = mul(adjQ, adjP)

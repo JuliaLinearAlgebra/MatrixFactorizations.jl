@@ -416,11 +416,6 @@ end
     transpose(transpose(F) \ transpose(B))
 
 
-if VERSION < v"1.10-" # disambiguation
-    (/)(A::Adjoint{<:Any,<:AbstractVector}, F::TransposeFact{<:Any,<:UL{<:Real}}) = transpose(transpose(F) \ transpose(A))
-    (/)(A::Transpose{<:Any,<:AbstractVector}, F::TransposeFact{<:Any,<:UL{<:Real}}) = transpose(transpose(F) \ transpose(A))
-end
-
 function det(F::UL{T}) where T
     n = checksquare(F)
     issuccess(F) || return zero(T)
