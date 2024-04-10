@@ -316,6 +316,12 @@ adjointlayout(::Type, ::QLPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQLPac
 MemoryLayout(::Type{<:QLPackedQ{<:Any,Mat,Tau}}) where {Mat,Tau} = 
     QLPackedQLayout{typeof(MemoryLayout(Mat)),typeof(MemoryLayout(Tau))}()
 
+colsupport(::QLPackedQLayout, Q, j) = minimum(colsupport(Q.factors, j)):size(Q,1)
+rowsupport(::QLPackedQLayout, Q, k) = oneto(maximum(rowsupport(Q.factors, k)))
+colsupport(::AdjQLPackedQLayout, Q, j) = oneto(maximum(colsupport(Q'.factors, j)))
+rowsupport(::AdjQLPackedQLayout, Q, k) = minimum(rowsupport(Q'.factors, k)):size(Q,2)
+
+
 
 function materialize!(M::Lmul{<:QLPackedQLayout})
     A,B = M.A, M.B
