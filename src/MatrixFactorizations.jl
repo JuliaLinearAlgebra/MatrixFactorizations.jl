@@ -1,6 +1,6 @@
 module MatrixFactorizations
 using Base, LinearAlgebra, ArrayLayouts
-import Base: axes, axes1, getproperty, iterate, tail
+import Base: axes, axes1, getproperty, iterate, tail, oneto
 import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
    copy_oftype, checksquare, adjoint, transpose, AdjOrTrans, HermOrSym,
    det, logdet, logabsdet, isposdef
@@ -34,7 +34,7 @@ import Base: convert, size, view, unsafe_indices,
 import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_layoutrmul,
    MemoryLayout, adjointlayout, AbstractQLayout, QRPackedQLayout,
    QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout,
-   layout_getindex
+   layout_getindex, rowsupport, colsupport
 
 
 export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, reversecholesky, reversecholesky!, ReverseCholesky
