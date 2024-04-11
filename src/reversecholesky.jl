@@ -52,7 +52,7 @@ function reversecholesky_layout!(_, A::AbstractMatrix, ::Type{UpperTriangular})
                 Akk -= realdiag ? abs2(A[k,j]) : A[k,j]'A[k,j]
             end
             A[k,k] = Akk
-            Akk, info = reversecholesk_layout!(MemoryLayout(Akk), Akk, UpperTriangular)
+            Akk, info = reversecholesky_layout!(MemoryLayout(Akk), Akk, UpperTriangular)
             if info != 0
                 return UpperTriangular(A), info
             end
