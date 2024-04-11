@@ -174,8 +174,10 @@ and return a [`ReverseCholesky`](@ref) factorization. The matrix `A` can either 
 The triangular ReverseCholesky factor can be obtained from the factorization `F` via `F.L` and `F.U`,
 where `A ≈ F.U * F.U' ≈ F.L' * F.L`.
 """
-reversecholesky(A::AbstractMatrix, ::NoPivot=NoPivot(); check::Bool = true) =
-    reversecholesky!(reversecholcopy(A); check)
+reversecholesky(A::AbstractMatrix, piv::NoPivot=NoPivot(); check::Bool = true) =
+    reversecholesky_layout(MemoryLayout(A), A, piv; check)
+
+reversecholesky_layout(_, A, piv; kwds...) reversecholesky!(reversecholcopy(A); kwds...)
 
 function reversecholesky(A::AbstractMatrix{Float16}, ::NoPivot=NoPivot(); check::Bool = true)
     X = reversecholesky!(reversecholcopy(A); check = check)
