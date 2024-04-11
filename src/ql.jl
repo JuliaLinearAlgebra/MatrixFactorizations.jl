@@ -72,7 +72,6 @@ end
 @inline qlfactUnblocked!(A::StridedMatrix{T}) where T<:BlasFloat = QL(LAPACK.geqlf!(A)...)
 
 
-
 # Generic fallbacks
 
 """
@@ -112,10 +111,10 @@ Stacktrace:
 [...]
 ```
 """
-@inline _ql!(layout, axes, A, ::Val{false}) = qlfactUnblocked!(A)
-@inline _ql!(layout, axes, A) = ql!(A, Val(false))
-@inline ql!(A::AbstractMatrix; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A; kwds...)
-@inline ql!(A::AbstractMatrix, val; kwds...) = _ql!(MemoryLayout(typeof(A)), axes(A), A, val; kwds...)
+@inline ql_layout!(layout, axes, A, ::Val{false}) = qlfactUnblocked!(A)
+@inline ql_layout!(layout, axes, A) = ql!(A, Val(false))
+@inline ql!(A::AbstractMatrix; kwds...) = ql_layout!(MemoryLayout(typeof(A)), axes(A), A; kwds...)
+@inline ql!(A::AbstractMatrix, val; kwds...) = ql_layout!(MemoryLayout(typeof(A)), axes(A), A, val; kwds...)
 
 @inline _qleltype(::Type{T}) where T = typeof(zero(T)/sqrt(abs2(one(T))))
 
@@ -177,9 +176,9 @@ julia> F.Q * F.L == A
 true
 ```
 """
-@inline ql(A::AbstractMatrix, args...; kwds...) = _ql(MemoryLayout(typeof(A)), axes(A), A, args...; kwds...)
+@inline ql(A::AbstractMatrix, args...; kwds...) = ql_layout(MemoryLayout(typeof(A)), axes(A), A, args...; kwds...)
 
-function _ql(layout, axes, A, args...; kwds...)
+function ql_layout(layout, axes, A, args...; kwds...)
     require_one_based_indexing(A)
     AA = similar(A, _qleltype(eltype(A)), size(A))
     copyto!(AA, A)
@@ -190,6 +189,10 @@ end
     require_one_based_indexing(v)
     ql(reshape(v, (length(v), 1)), args...; kwds...)
 end
+
+# for backward compatability
+const _ql! = ql_layout!
+const _ql = ql_layout
 
 # Conversions
 QL{T}(A::QL) where {T} = QL(convert(AbstractMatrix{T}, A.factors), convert(AbstractVector{T}, A.τ))
