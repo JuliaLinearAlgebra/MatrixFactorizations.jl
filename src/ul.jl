@@ -283,11 +283,13 @@ julia> l == F.L && u == F.U && p == F.p
 true
 ```
 """
-function _ul(layout, A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true);
+function ul_layout(layout, A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true);
             check::Bool = true) where T
     S = ultype(T)
     ul!(copy_oftype(A, S), pivot; check = check)
 end
+
+const _ul = ul_layout
 
 ul(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true); check::Bool = true) where T = 
     _ul(MemoryLayout(A), A, pivot; check=check)
