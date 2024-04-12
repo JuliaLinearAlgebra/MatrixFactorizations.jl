@@ -39,7 +39,7 @@ Base.iterate(C::ReverseCholesky, ::Val{:U}) = (C.L, Val(:done))
 Base.iterate(C::ReverseCholesky, ::Val{:done}) = nothing
 
 ## Non BLAS/LAPACK element types (generic)
-function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
+function reversecholesky_layout!(_, A::AbstractMatrix, ::Type{UpperTriangular})
     require_one_based_indexing(A)
     n = checksquare(A)
     realdiag = eltype(A) <: Complex
@@ -52,7 +52,7 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
                 Akk -= realdiag ? abs2(A[k,j]) : A[k,j]'A[k,j]
             end
             A[k,k] = Akk
-            Akk, info = _reverse_chol!(Akk, UpperTriangular)
+            Akk, info = reversecholesky_layout!(MemoryLayout(Akk), Akk, UpperTriangular)
             if info != 0
                 return UpperTriangular(A), info
             end
@@ -72,7 +72,7 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{UpperTriangular})
     return UpperTriangular(A), convert(BlasInt, 0)
 end
 
-function _reverse_chol!(A::AbstractMatrix, ::Type{LowerTriangular})
+function reversecholesky_layout!(_, A::AbstractMatrix, ::Type{LowerTriangular})
     require_one_based_indexing(A)
     n = checksquare(A)
     realdiag = eltype(A) <: Complex
@@ -85,7 +85,7 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{LowerTriangular})
                 Akk -= realdiag ? abs2(A[i,k]) : A[i,k]'A[i,k]
             end
             A[k,k] = Akk
-            Akk, info = _reverse_chol!(Akk, LowerTriangular)
+            Akk, info = reversecholesky_layout!(MemoryLayout(Akk), Akk, LowerTriangular)
             if info != 0
                 return LowerTriangular(A), info
             end
@@ -103,7 +103,7 @@ function _reverse_chol!(A::AbstractMatrix, ::Type{LowerTriangular})
 end
 
 ## Numbers
-_reverse_chol!(x::Number, uplo) = LinearAlgebra._chol!(x, uplo)
+reversecholesky_layout!(_, x::Number, uplo) = LinearAlgebra._chol!(x, uplo)
 
 ## for StridedMatrices, check that matrix is symmetric/Hermitian
 
@@ -111,7 +111,7 @@ _reverse_chol!(x::Number, uplo) = LinearAlgebra._chol!(x, uplo)
 # or Hermitian matrix
 ## No pivoting (default)
 function reversecholesky!(A::RealHermSymComplexHerm, ::NoPivot = NoPivot(); check::Bool = true)
-    C, info = _reverse_chol!(A.data, A.uplo == 'U' ? UpperTriangular : LowerTriangular)
+    C, info = reversecholesky_layout!(MemoryLayout(A.data), A.data, A.uplo == 'U' ? UpperTriangular : LowerTriangular)
     check && checkpositivedefinite(info)
     return ReverseCholesky(C.data, A.uplo, info)
 end
@@ -174,8 +174,10 @@ and return a [`ReverseCholesky`](@ref) factorization. The matrix `A` can either 
 The triangular ReverseCholesky factor can be obtained from the factorization `F` via `F.L` and `F.U`,
 where `A ≈ F.U * F.U' ≈ F.L' * F.L`.
 """
-reversecholesky(A::AbstractMatrix, ::NoPivot=NoPivot(); check::Bool = true) =
-    reversecholesky!(reversecholcopy(A); check)
+reversecholesky(A::AbstractMatrix, piv::NoPivot=NoPivot(); check::Bool = true) =
+    reversecholesky_layout(MemoryLayout(A), axes(A), A, piv; check)
+
+reversecholesky_layout(lay, ax, A, piv; kwds...) = reversecholesky!(reversecholcopy(A); kwds...)
 
 function reversecholesky(A::AbstractMatrix{Float16}, ::NoPivot=NoPivot(); check::Bool = true)
     X = reversecholesky!(reversecholcopy(A); check = check)
@@ -185,11 +187,12 @@ end
 
 ## Number
 function reversecholesky(x::Number, uplo::Symbol=:U)
-    C, info = _reverse_chol!(x, uplo)
+    C, info = reversecholesky_layout!(MemoryLayout(x), x, uplo)
     xf = fill(C, 1, 1)
     ReverseCholesky(xf, uplo, info)
 end
 
+_reverse_chol!(A, T) = reversecholesky_layout!(MemoryLayout(A), A, T)
 
 function ReverseCholesky{T}(C::ReverseCholesky) where T
     Cnew = convert(AbstractMatrix{T}, C.factors)
