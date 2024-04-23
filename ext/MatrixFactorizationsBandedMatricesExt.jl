@@ -1,15 +1,4 @@
 ###
-# MatrixFactorizations.QRPackedQ
-###
-
-materialize!(M::Lmul{<:QRPackedQLayout{<:AbstractBandedLayout}}) = banded_qr_lmul!(M.A,M.B)
-materialize!(M::Lmul{<:AdjQRPackedQLayout{<:AbstractBandedLayout}}) = banded_qr_lmul!(M.A,M.B)
-
-materialize!(M::Rmul{<:Any,<:QRPackedQLayout{<:AbstractBandedLayout}}) = banded_qr_rmul!(M.A,M.B)
-materialize!(M::Rmul{<:Any,<:AdjQRPackedQLayout{<:AbstractBandedLayout}}) = banded_qr_rmul!(M.A,M.B)
-
-
-###
 # QL
 ###
 

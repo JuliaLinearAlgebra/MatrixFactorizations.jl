@@ -4,16 +4,25 @@ version = "3.0-dev"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[weakdeps]
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+
+[extensions]
+MatrixFactorizationsBandedMatricesExt = "BandedMatrices"
+
 [compat]
 ArrayLayouts = "1.9.2"
+BandedMatrices = "1.6"
 julia = "1.9"
 
 [extras]
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["BandedMatrices", "Test"]
