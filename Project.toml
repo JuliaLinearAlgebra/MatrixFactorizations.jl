@@ -1,6 +1,6 @@
 name = "MatrixFactorizations"
 uuid = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
-version = "3"
+version = "3.0-dev"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
