@@ -2,8 +2,10 @@ module MatrixFactorizationsBandedMatricesExt
 using BandedMatrices, MatrixFactorizations, LinearAlgebra
 using MatrixFactorizations.ArrayLayouts
 import MatrixFactorizations: ql, ql!, QLPackedQLayout, AdjQLPackedQLayout, QL
-import ArrayLayouts: materialize!
+import ArrayLayouts: materialize!, reflector!, reflectorApply!
 import LinearAlgebra: ldiv!
+using BandedMatrices: bandeddata
+using Base: require_one_based_indexing
 ###
 # QL
 ###
