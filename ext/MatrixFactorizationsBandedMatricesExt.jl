@@ -1,3 +1,9 @@
+module MatrixFactorizationsBandedMatricesExt
+using BandedMatrices, MatrixFactorizations, LinearAlgebra
+using MatrixFactorizations.ArrayLayouts
+import MatrixFactorizations: ql, ql!, QLPackedQLayout, AdjQLPackedQLayout, QL
+import ArrayLayouts: materialize!
+import LinearAlgebra: ldiv!
 ###
 # QL
 ###
@@ -175,3 +181,5 @@ for Typ in (:StridedVector, :StridedMatrix, :AbstractVecOrMat)
         end
     end
 end
+
+end # module
