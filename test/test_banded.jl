@@ -127,5 +127,16 @@ using MatrixFactorizations, LinearAlgebra, BandedMatrices, Test
         Q, L = ql(A)
         @test_broken Q*L ≈ A
     end
+
+    @testset "bounds" begin
+        A = brand(100,100,3,4)
+        @test_throws DimensionMismatch ql(A) \ randn(50)
+        @test_throws DimensionMismatch ldiv!(ql(A), randn(50))
+        Q = ql(A).Q
+        @test_throws DimensionMismatch lmul!(Q, randn(50))
+        @test_throws DimensionMismatch lmul!(Q', randn(50))
+        @test_throws DimensionMismatch rmul!(randn(50)', Q)
+        @test_throws DimensionMismatch rmul!(randn(50)', Q')
+    end
 end
 end

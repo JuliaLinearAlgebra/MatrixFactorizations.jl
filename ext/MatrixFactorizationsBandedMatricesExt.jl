@@ -95,7 +95,7 @@ function materialize!(M::Lmul{<:AdjQLPackedQLayout{<:AbstractBandedLayout}})
 end
 
 ### QBc/QcBc
-function materialize!(M::Rmul{<:QLPackedQLayout{<:AbstractBandedLayout}})
+function materialize!(M::Rmul{<:Any,<:QLPackedQLayout{<:AbstractBandedLayout}})
     A,Q = M.A,M.B
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
@@ -125,7 +125,7 @@ function materialize!(M::Rmul{<:QLPackedQLayout{<:AbstractBandedLayout}})
 end
 
 ### AQc
-function materialize!(M::Rmul{<:AdjQLPackedQLayout{<:AbstractBandedLayout}})
+function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout{<:AbstractBandedLayout}})
     A,adjQ = M.A,M.B
     Q = parent(adjQ)
     mQ, nQ = size(Q.factors)
