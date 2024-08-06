@@ -101,9 +101,11 @@ end
 
 if VERSION < v"1.7-"
     _checknonsingular(info, ::Val{Pivot}) where Pivot = checknonsingular(info, Val{Pivot}())
-else
+elseif VERSION < v"1.11-"
     _checknonsingular(info, ::Val{true}) = checknonsingular(info, RowMaximum())
     _checknonsingular(info, ::Val{false}) = checknonsingular(info, NoPivot())
+else
+    _checknonsingular(info, _) = checknonsingular(info)
 end
 
 """
