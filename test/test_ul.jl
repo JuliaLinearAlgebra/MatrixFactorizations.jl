@@ -197,10 +197,17 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
         @test_throws SingularException ul!(copy(A); check = true)
         @test !issuccess(ul(A; check = false))
         @test !issuccess(ul!(copy(A); check = false))
-        @test_throws ZeroPivotException ul(A, Val(false))
-        @test_throws ZeroPivotException ul!(copy(A), Val(false))
-        @test_throws ZeroPivotException ul(A, Val(false); check = true)
-        @test_throws ZeroPivotException ul!(copy(A), Val(false); check = true)
+        if VERSION < v"1.11-"
+            @test_throws ZeroPivotException ul(A, Val(false))
+            @test_throws ZeroPivotException ul!(copy(A), Val(false))
+            @test_throws ZeroPivotException ul(A, Val(false); check = true)
+            @test_throws ZeroPivotException ul!(copy(A), Val(false); check = true)
+        else
+            @test_throws SingularException ul(A, Val(false))
+            @test_throws SingularException ul!(copy(A), Val(false))
+            @test_throws SingularException ul(A, Val(false); check = true)
+            @test_throws SingularException ul!(copy(A), Val(false); check = true)
+        end
         @test !issuccess(ul(A, Val(false); check = false))
         @test !issuccess(ul!(copy(A), Val(false); check = false))
         F = ul(A; check = false)
