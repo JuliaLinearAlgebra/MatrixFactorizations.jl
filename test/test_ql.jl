@@ -210,4 +210,9 @@ using MatrixFactorizations, ArrayLayouts, Test
         @test rowsupport(Q, 4) ≡ colsupport(Q', 4) ≡ Base.OneTo(5)
         @test colsupport(Q, 4) ≡ rowsupport(Q', 4) ≡ 3:10
     end
+
+    @testset "AbstractMatrix conversion" begin
+        Q = ql(randn(5,5)).Q
+        @test AbstractMatrix{Float64}(Q) isa Matrix{Float64}
+    end
 end
