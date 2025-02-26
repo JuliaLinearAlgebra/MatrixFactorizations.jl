@@ -50,12 +50,18 @@ const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? Linear
 abstract type LayoutQ{T} <: AbstractQ{T} end
 
 
+# Support orthogonal matrices as an abstract matrix
+abstract type LayoutQMatrix{T} <: LayoutMatrix{T} end
+
+const LayoutQTypes{T} = Union{LayoutQ{T}, LayoutQMatrix{T}}
+
+
 @_layoutlmul LayoutQ
 @_layoutlmul AdjointQtype{<:Any,<:LayoutQ}
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
 
-LinearAlgebra.copymutable(Q::LayoutQ) = copymutable_size(size(Q), Q)
+LinearAlgebra.copymutable(Q::LayoutQTypes) = copymutable_size(size(Q), Q)
 copymutable_size(sz, Q) = lmul!(Q, Matrix{eltype(Q)}(I, sz))
 
 (*)(Q::LayoutQ, b::AbstractVector) = _mul(Q, b)
@@ -106,10 +112,11 @@ end
 *(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
 *(A::AbstractTriangular, B::AdjointQtype{<:Any,<:LayoutQ}) = mul(A, B)
 
-axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
-axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
-copy(Q::LayoutQ) = Q
+axes(Q::LayoutQTypes, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
+axes(Q::LayoutQTypes) = axes(Q, 1), axes(Q, 2)
+copy(Q::LayoutQTypes) = Q
 Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+Base.@propagate_inbounds getindex(A::LayoutQMatrix, I...) = AbstractQ(A)[I...]
 # by default, fall back to AbstractQ  methods
 layout_getindex(A::LayoutQ, I...) =
     Base.invoke(Base.getindex, Tuple{AbstractQ, typeof.(I)...}, A, I...)
