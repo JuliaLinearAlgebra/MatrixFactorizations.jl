@@ -182,7 +182,7 @@ struct QRPackedQMatrix{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: LayoutQ
 end
 
 
-for QType in (:QRPackedQ, :QRPackedQMatrix)
+for QTyp in (:QRPackedQ, :QRPackedQMatrix)
     @eval begin
         $QTyp(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = $QTyp{T,typeof(factors),typeof(τ)}(factors, τ)
         function $QTyp{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
@@ -190,9 +190,10 @@ for QType in (:QRPackedQ, :QRPackedQMatrix)
         end
 
         $QTyp{T}(Q::$QTyp) where {T} = $QTyp(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
-        $QTyp(Q::LinearAlgebra.$QTyp) = $QTyp(Q.factors, Q.τ)
     end
 end
+
+QRPackedQ(Q::LinearAlgebra.QRPackedQ) = QRPackedQ(Q.factors, Q.τ)
 
 const QRPackedQTypes{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} = Union{QRPackedQ{T,S,Tau}, QRPackedQMatrix{T,S,Tau}}
 
@@ -203,6 +204,7 @@ AbstractQ{T}(Q::QRPackedQ{T}) where {T} = Q
 AbstractQ{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
 AbstractQ{T}(Q::QRPackedQMatrix{T}) where {T} = QRPackedQ(Q.factors, Q.τ)
 AbstractQ{T}(Q::QRPackedQMatrix) where {T} = QRPackedQ{T}(Q.factors, Q.τ)
+AbstractQ(Q::QRPackedQMatrix) = QRPackedQ(Q.factors, Q.τ)
 convert(::Type{AbstractQ{T}}, Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
 AbstractMatrix{T}(Q::QRPackedQ) where {T} = Matrix{T}(Q)
 
@@ -250,3 +252,9 @@ function (\)(A::QR{T}, BIn::VecOrMat{Complex{T}}) where T<:BlasReal
     XX = reshape(collect(reinterpret(Complex{T}, copy(transpose(reshape(X, div(length(X), 2), 2))))), _ret_size(A, BIn))
     return _cut_B(XX, 1:n)
 end
+
+
+
+# support lazy broadcasting
+
+BroadcastStyle(::Type{<:QRPackedQMatrix{<:Any,F}}) where {F} = BroadcastStyle(F) # TODO: broken for banded?

@@ -1,6 +1,6 @@
 module MatrixFactorizations
 using Base, LinearAlgebra, ArrayLayouts
-import Base: axes, axes1, getproperty, iterate, tail, oneto
+import Base: axes, axes1, getproperty, iterate, tail, oneto, BroadcastStyle
 import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
    copy_oftype, checksquare, adjoint, transpose, AdjOrTrans, HermOrSym,
    det, logdet, logabsdet, isposdef
@@ -116,13 +116,13 @@ axes(Q::LayoutQTypes, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 :
 axes(Q::LayoutQTypes) = axes(Q, 1), axes(Q, 2)
 copy(Q::LayoutQTypes) = Q
 Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
-Base.@propagate_inbounds getindex(A::LayoutQMatrix, I...) = AbstractQ(A)[I...]
+Base.@propagate_inbounds getindex(A::LayoutQMatrix, k::Int, j::Int) = AbstractQ(A)[k, j]
 # by default, fall back to AbstractQ  methods
 layout_getindex(A::LayoutQ, I...) =
     Base.invoke(Base.getindex, Tuple{AbstractQ, typeof.(I)...}, A, I...)
 
-size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
-size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
+size(Q::LayoutQTypes, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
+size(Q::LayoutQTypes) = size(Q, 1), size(Q, 2)
 
 include("ul.jl")
 include("qr.jl")
