@@ -207,4 +207,9 @@ const Our=MatrixFactorizations
         @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
         @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
     end
+
+    @testset "AbstractMatrix conversion" begin
+        Q = rq(randn(5,5)).Q
+        @test AbstractMatrix{Float64}(Q) isa Matrix{Float64}
+    end
 end

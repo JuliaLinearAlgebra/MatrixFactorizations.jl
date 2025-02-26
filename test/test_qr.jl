@@ -200,4 +200,9 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
         @test rowsupport(Q, 4) ≡ colsupport(Q', 4) ≡ 3:10
         @test colsupport(Q, 4) ≡ rowsupport(Q', 4) ≡ Base.OneTo(5)
     end
+
+    @testset "AbstractMatrix conversion" begin
+        Q = qrunblocked(randn(5,5)).Q
+        @test AbstractMatrix{Float64}(Q) isa Matrix{Float64}
+    end
 end
