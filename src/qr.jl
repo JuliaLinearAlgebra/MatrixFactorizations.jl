@@ -145,6 +145,8 @@ ldiv!(F::QR, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)
 ldiv!(F::QR, B::LayoutVector) = ArrayLayouts.ldiv!(F, B)
 ldiv!(F::QR, B::LayoutMatrix) = ArrayLayouts.ldiv!(F, B)
 
+size(F::QR, dim::Integer) = size(getfield(F, :factors), dim)
+size(F::QR) = size(getfield(F, :factors))
 
 """
     QRPackedQ <: LinearAlgebra.AbstractQ
@@ -163,28 +165,51 @@ end
 
 
 
-QRPackedQ(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = QRPackedQ{T,typeof(factors),typeof(τ)}(factors, τ)
-function QRPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
-    QRPackedQ(convert(AbstractMatrix{T}, factors), convert(AbstractVector{T}, τ))
+"""
+    QRPackedQMatrix <: LayoutQMatrix
+
+The orthogonal/unitary ``Q`` matrix of a QR factorization stored in [`QR`](@ref),
+conforming to the `AbstractMatrix` interface.
+"""
+struct QRPackedQMatrix{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: LayoutQMatrix{T}
+    factors::S
+    τ::Tau
+
+    function QRPackedQMatrix{T,S,Tau}(factors, τ) where {T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}}
+        require_one_based_indexing(factors)
+        new{T,S,Tau}(factors, τ)
+    end
 end
 
-QRPackedQ{T}(Q::QRPackedQ) where {T} = QRPackedQ(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
+
+for QTyp in (:QRPackedQ, :QRPackedQMatrix)
+    @eval begin
+        $QTyp(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = $QTyp{T,typeof(factors),typeof(τ)}(factors, τ)
+        function $QTyp{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
+            $QTyp(convert(AbstractMatrix{T}, factors), convert(AbstractVector{T}, τ))
+        end
+
+        $QTyp{T}(Q::$QTyp) where {T} = $QTyp(convert(AbstractMatrix{T}, Q.factors), convert(AbstractVector{T}, Q.τ))
+    end
+end
+
 QRPackedQ(Q::LinearAlgebra.QRPackedQ) = QRPackedQ(Q.factors, Q.τ)
+
+const QRPackedQTypes{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} = Union{QRPackedQ{T,S,Tau}, QRPackedQMatrix{T,S,Tau}}
+
+Matrix{T}(Q::QRPackedQTypes{S}) where {T,S} = convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
+Matrix(Q::QRPackedQTypes{S}) where {S} = Matrix{S}(Q)
 
 AbstractQ{T}(Q::QRPackedQ{T}) where {T} = Q
 AbstractQ{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
+AbstractQ{T}(Q::QRPackedQMatrix{T}) where {T} = QRPackedQ(Q.factors, Q.τ)
+AbstractQ{T}(Q::QRPackedQMatrix) where {T} = QRPackedQ{T}(Q.factors, Q.τ)
+AbstractQ(Q::QRPackedQMatrix) = QRPackedQ(Q.factors, Q.τ)
 convert(::Type{AbstractQ{T}}, Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
-
-Matrix{T}(Q::QRPackedQ{S}) where {T,S} =
-    convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
-Matrix(Q::QRPackedQ{S}) where {S} = Matrix{S}(Q)
-
 AbstractMatrix{T}(Q::QRPackedQ) where {T} = Matrix{T}(Q)
 
-size(F::QR, dim::Integer) = size(getfield(F, :factors), dim)
-size(F::QR) = size(getfield(F, :factors))
 
-MemoryLayout(::Type{<:QRPackedQ{<:Any,S,T}}) where {S,T} =
+MemoryLayout(::Type{<:QRPackedQTypes{<:Any,S,T}}) where {S,T} =
     QRPackedQLayout{typeof(MemoryLayout(S)),typeof(MemoryLayout(T))}()
 
 MemoryLayout(::Type{<:QR{<:Any,S,T}}) where {S,T} =
@@ -227,3 +252,9 @@ function (\)(A::QR{T}, BIn::VecOrMat{Complex{T}}) where T<:BlasReal
     XX = reshape(collect(reinterpret(Complex{T}, copy(transpose(reshape(X, div(length(X), 2), 2))))), _ret_size(A, BIn))
     return _cut_B(XX, 1:n)
 end
+
+
+
+# support lazy broadcasting
+
+BroadcastStyle(::Type{<:QRPackedQMatrix{<:Any,F}}) where {F} = BroadcastStyle(F) # TODO: broken for banded?

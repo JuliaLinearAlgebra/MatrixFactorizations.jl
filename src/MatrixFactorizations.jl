@@ -1,6 +1,6 @@
 module MatrixFactorizations
 using Base, LinearAlgebra, ArrayLayouts
-import Base: axes, axes1, getproperty, iterate, tail, oneto
+import Base: axes, axes1, getproperty, iterate, tail, oneto, BroadcastStyle
 import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
    copy_oftype, checksquare, adjoint, transpose, AdjOrTrans, HermOrSym,
    det, logdet, logabsdet, isposdef
@@ -50,12 +50,18 @@ const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? Linear
 abstract type LayoutQ{T} <: AbstractQ{T} end
 
 
+# Support orthogonal matrices as an abstract matrix
+abstract type LayoutQMatrix{T} <: LayoutMatrix{T} end
+
+const LayoutQTypes{T} = Union{LayoutQ{T}, LayoutQMatrix{T}}
+
+
 @_layoutlmul LayoutQ
 @_layoutlmul AdjointQtype{<:Any,<:LayoutQ}
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
 
-LinearAlgebra.copymutable(Q::LayoutQ) = copymutable_size(size(Q), Q)
+LinearAlgebra.copymutable(Q::LayoutQTypes) = copymutable_size(size(Q), Q)
 copymutable_size(sz, Q) = lmul!(Q, Matrix{eltype(Q)}(I, sz))
 
 (*)(Q::LayoutQ, b::AbstractVector) = _mul(Q, b)
@@ -106,16 +112,17 @@ end
 *(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
 *(A::AbstractTriangular, B::AdjointQtype{<:Any,<:LayoutQ}) = mul(A, B)
 
-axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
-axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)
-copy(Q::LayoutQ) = Q
+axes(Q::LayoutQTypes, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
+axes(Q::LayoutQTypes) = axes(Q, 1), axes(Q, 2)
+copy(Q::LayoutQTypes) = Q
 Base.@propagate_inbounds getindex(A::LayoutQ, I...) = layout_getindex(A, I...)
+Base.@propagate_inbounds getindex(A::LayoutQMatrix, k::Int, j::Int) = AbstractQ(A)[k, j]
 # by default, fall back to AbstractQ  methods
 layout_getindex(A::LayoutQ, I...) =
     Base.invoke(Base.getindex, Tuple{AbstractQ, typeof.(I)...}, A, I...)
 
-size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
-size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
+size(Q::LayoutQTypes, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
+size(Q::LayoutQTypes) = size(Q, 1), size(Q, 2)
 
 include("ul.jl")
 include("qr.jl")
