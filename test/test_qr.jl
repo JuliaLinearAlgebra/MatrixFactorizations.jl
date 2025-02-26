@@ -61,11 +61,7 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * squareQ(q) ≈ Matrix(I, sq, sq) atol=5000ε
                     if eltya != Int
-                        if VERSION < v"1.10-"
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
-                        else
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
-                        end
+                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
                         ac = copy(a)
                         @test qrunblocked!(a[:, 1:5])\b == qrunblocked!(view(ac, :, 1:5))\b
                     end
@@ -91,11 +87,7 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
                     sq = size(q.factors, 1)
                     @test *(LowerTriangular(Matrix{eltyb}(I, sq, sq)), adjoint(q))*squareQ(q) ≈ Matrix(I, a_1, a_1) atol=5000ε
                     if eltya != Int
-                        if VERSION < v"1.10-"
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
-                        else
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
-                        end
+                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
                     end
                 end
             end
@@ -207,5 +199,10 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
         Q = MatrixFactorizations.QRPackedQ(Tridiagonal(Q.factors), Q.τ)
         @test rowsupport(Q, 4) ≡ colsupport(Q', 4) ≡ 3:10
         @test colsupport(Q, 4) ≡ rowsupport(Q', 4) ≡ Base.OneTo(5)
+    end
+
+    @testset "AbstractMatrix conversion" begin
+        Q = qrunblocked(randn(5,5)).Q
+        @test AbstractMatrix{Float64}(Q) isa Matrix{Float64}
     end
 end

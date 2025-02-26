@@ -95,11 +95,7 @@ using MatrixFactorizations, ArrayLayouts, Test
                     sq = size(q.factors, 1)
                     @test *(LowerTriangular(Matrix{eltyb}(I, sq, sq)), adjoint(q))*squareQ(q) ≈ Matrix(I, a_1, a_1) atol=5000ε
                     if eltya != Int
-                        if VERSION < v"1.10-"
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
-                        else
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
-                        end
+                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
                     end
                 end
             end
@@ -213,5 +209,10 @@ using MatrixFactorizations, ArrayLayouts, Test
         Q = MatrixFactorizations.QLPackedQ(Tridiagonal(Q.factors), Q.τ)
         @test rowsupport(Q, 4) ≡ colsupport(Q', 4) ≡ Base.OneTo(5)
         @test colsupport(Q, 4) ≡ rowsupport(Q', 4) ≡ 3:10
+    end
+
+    @testset "AbstractMatrix conversion" begin
+        Q = ql(randn(5,5)).Q
+        @test AbstractMatrix{Float64}(Q) isa Matrix{Float64}
     end
 end

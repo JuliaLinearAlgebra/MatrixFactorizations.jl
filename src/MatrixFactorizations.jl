@@ -12,13 +12,8 @@ import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!
    checknonsingular, ipiv2perm, copytri!, issuccess, RealHermSymComplexHerm,
    cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype
 
-if VERSION ≥ v"1.10-"
-    using LinearAlgebra: TransposeFactorization, AdjointFactorization
-else
-    const TransposeFactorization = Transpose
-    const AdjointFactorization = Adjoint
 
-end
+using LinearAlgebra: TransposeFactorization, AdjointFactorization
 
 import Base: getindex, setindex!, *, +, -, ==, <, <=, >,
    >=, /, ^, \, transpose, showerror, reindex, checkbounds, @propagate_inbounds
@@ -53,6 +48,8 @@ const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? Linear
 # objects are flexible in size when multiplied from the left, or its adjoint
 # from the right.
 abstract type LayoutQ{T} <: AbstractQ{T} end
+
+
 @_layoutlmul LayoutQ
 @_layoutlmul AdjointQtype{<:Any,<:LayoutQ}
 @_layoutrmul LayoutQ
@@ -108,30 +105,6 @@ end
 *(A::AdjointQtype{<:Any,<:LayoutQ}, B::AbstractTriangular) = mul(A, B)
 *(A::AbstractTriangular, B::LayoutQ) = mul(A, B)
 *(A::AbstractTriangular, B::AdjointQtype{<:Any,<:LayoutQ}) = mul(A, B)
-
-if VERSION < v"1.10-"
-    (*)(Q::LayoutQ, b::StridedVector)  = _mul(Q, b)
-    (*)(Q::LayoutQ, B::StridedMatrix)  = _mul(Q, B)
-    (*)(Q::LayoutQ, B::Adjoint{<:Any,<:StridedVecOrMat}) = _mul(Q, B)
-    (*)(A::StridedMatrix, adjQ::AdjointQtype{<:Any,<:LayoutQ})  = _mul(A, adjQ)
-    (*)(A::Adjoint{<:Any,<:StridedMatrix}, adjQ::AdjointQtype{<:Any,<:LayoutQ}) = _mul(A, adjQ)
-
-    Base.@propagate_inbounds getindex(Q::LayoutQ, i::Int, j::Int) = Q[:, j][i]
-    function getindex(Q::LayoutQ, ::Colon, j::Int)
-        y = zeros(eltype(Q), size(Q, 2))
-        y[j] = 1
-        lmul!(Q, y)
-    end
-    Base.@propagate_inbounds layout_getindex(A::LayoutQ, I::CartesianIndex) = A[to_indices(A, (I,))...]
-    Base.@propagate_inbounds layout_getindex(A::LayoutQ, I::Int...) =
-        Base.invoke(Base.getindex, Tuple{AbstractQ, typeof.(I)...}, A, I...)
-    Base.@propagate_inbounds layout_getindex(A::LayoutQ, I::AbstractVector{Int}, J::AbstractVector{Int}) =
-        hcat((A[:, j][I] for j in J)...)
-
-    (*)(Q::LayoutQ, adjQ::Adjoint{<:Any,<:LayoutQ}) = mul(Q, adjQ)
-    (*)(adjQ::Adjoint{<:Any,<:LayoutQ}, Q::LayoutQ) = mul(adjQ, Q)
-    (*)(adjQ::Adjoint{<:Any,<:LayoutQ}, adjP::Adjoint{<:Any,<:LayoutQ}) = mul(adjQ, adjP)
-end
 
 axes(Q::LayoutQ, dim::Integer) = axes(getfield(Q, :factors), dim == 2 ? 1 : dim)
 axes(Q::LayoutQ) = axes(Q, 1), axes(Q, 2)

@@ -105,11 +105,7 @@ const Our=MatrixFactorizations
                     sq = size(q.factors, 2)
                     @test *(Matrix{eltyb}(I, sq, sq), adjoint(q)) * q ≈ Matrix(I, sq, sq) atol=5000ε
                     if eltya != Int
-                        if VERSION < v"1.10-"
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ convert(AbstractMatrix{tab}, q)
-                        else
-                            @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
-                        end
+                        @test Matrix{eltyb}(I, a_1, a_1)*q ≈ squareQ(convert(LinearAlgebra.AbstractQ{tab}, q))
                         ac = copy(a)
                         # would need rectangular ldiv! method
                         @test_throws DimensionMismatch rq!(a[:, 1:5])\b == rq!(view(ac, :, 1:5))\b
@@ -210,5 +206,10 @@ const Our=MatrixFactorizations
         c = randn(2,100) .+ s
         @test rmul!(copy(c), Q) ≈ c*Matrix(Q)
         @test rmul!(copy(c), Q') ≈ c*Matrix(Q')
+    end
+
+    @testset "AbstractMatrix conversion" begin
+        Q = rq(randn(5,5)).Q
+        @test AbstractMatrix{Float64}(Q) isa Matrix{Float64}
     end
 end
