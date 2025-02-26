@@ -160,6 +160,9 @@ struct QRPackedQ{T,S<:AbstractMatrix{T},Tau<:AbstractVector{T}} <: LayoutQ{T}
         new{T,S,Tau}(factors, τ)
     end
 end
+
+
+
 QRPackedQ(factors::AbstractMatrix{T}, τ::AbstractVector{T}) where {T} = QRPackedQ{T,typeof(factors),typeof(τ)}(factors, τ)
 function QRPackedQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
     QRPackedQ(convert(AbstractMatrix{T}, factors), convert(AbstractVector{T}, τ))
@@ -176,15 +179,7 @@ Matrix{T}(Q::QRPackedQ{S}) where {T,S} =
     convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
 Matrix(Q::QRPackedQ{S}) where {S} = Matrix{S}(Q)
 
-if VERSION < v"1.10-"
-    AbstractMatrix{T}(Q::QRPackedQ{T}) where {T} = Q
-    AbstractMatrix{T}(Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
-    convert(::Type{AbstractMatrix{T}}, Q::QRPackedQ) where {T} = QRPackedQ{T}(Q)
-    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:QRPackedQ}) where {T} =
-        (QRPackedQ{T}(parent(adjQ)))'
-else
-    AbstractMatrix{T}(Q::QRPackedQ) where {T} = Matrix{T}(Q)
-end
+AbstractMatrix{T}(Q::QRPackedQ) where {T} = Matrix{T}(Q)
 
 size(F::QR, dim::Integer) = size(getfield(F, :factors), dim)
 size(F::QR) = size(getfield(F, :factors))

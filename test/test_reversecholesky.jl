@@ -298,10 +298,7 @@ end
 
         # complex, failing
         D[2, 2] = 0.0 + 0im
-        if VERSION ≥ v"1.10"
-            @test_throws PosDefException reversecholesky(D)
-        end
-        
+        @test_throws PosDefException reversecholesky(D)        
 
         # InexactError for Int
         @test_throws InexactError reversecholesky!(Diagonal([2, 1]))

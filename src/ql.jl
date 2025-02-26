@@ -265,15 +265,7 @@ Matrix{T}(Q::QLPackedQ{S}) where {T,S} =
     convert(Matrix{T}, lmul!(Q, Matrix{S}(I, size(Q, 1), min(size(Q.factors)...))))
 Matrix(Q::QLPackedQ{S}) where {S} = Matrix{S}(Q)
 
-if VERSION < v"1.10-"
-    AbstractMatrix{T}(Q::QLPackedQ{T}) where {T} = Q
-    AbstractMatrix{T}(Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
-    convert(::Type{AbstractMatrix{T}}, Q::QLPackedQ) where {T} = QLPackedQ{T}(Q)
-    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:QLPackedQ}) where {T} =
-        (QLPackedQ{T}(parent(adjQ)))'
-else
-    AbstractMatrix{T}(Q::QLPackedQ) where {T} = Matrix{T}(Q)
-end
+AbstractMatrix{T}(Q::QLPackedQ) where {T} = Matrix{T}(Q)
 
 size(Q::QLPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 

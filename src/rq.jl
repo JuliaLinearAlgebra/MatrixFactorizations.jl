@@ -122,16 +122,7 @@ Matrix(Q::RQPackedQ{S}) where {S} = Matrix{S}(Q)
 AbstractQ{T}(Q::RQPackedQ{T}) where {T} = Q
 AbstractQ{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
 convert(::Type{AbstractQ{T}}, Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
-
-if VERSION < v"1.10-"
-    AbstractMatrix{T}(Q::RQPackedQ{T}) where {T} = Q
-    AbstractMatrix{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
-    convert(::Type{AbstractMatrix{T}}, Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
-    convert(::Type{AbstractMatrix{T}}, adjQ::Adjoint{<:Any,<:RQPackedQ}) where {T} =
-        (RQPackedQ{T}(parent(adjQ)))'
-else
-    AbstractMatrix{T}(Q::RQPackedQ) where {T} = Matrix{T}(Q)
-end
+AbstractMatrix{T}(Q::RQPackedQ) where {T} = Matrix{T}(Q)
 
 Base.size(Q::RQPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 1 ? 2 : dim)
 Base.size(Q::RQPackedQ) = size(Q, 1), size(Q, 2)

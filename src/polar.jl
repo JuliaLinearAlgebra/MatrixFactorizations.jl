@@ -486,11 +486,6 @@ mutable struct QDWHUpdater{T} <: PolarUpdater
     L::T  # a lower bound for the smallest singluar value of each update matrix U
 end
 
-
-if VERSION < v"1.7-"
-    ColumnNorm() = Val(true)
-end
-
 function update_U!(upd::QDWHUpdater, U::Matrix{T}) where {T}
     piv = upd.piv
     L = upd.L

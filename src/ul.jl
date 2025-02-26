@@ -99,9 +99,7 @@ end
 #     ul!(A.data, pivot; check = check)
 # end
 
-if VERSION < v"1.7-"
-    _checknonsingular(info, ::Val{Pivot}) where Pivot = checknonsingular(info, Val{Pivot}())
-elseif VERSION < v"1.11-"
+if VERSION < v"1.11-"
     _checknonsingular(info, ::Val{true}) = checknonsingular(info, RowMaximum())
     _checknonsingular(info, ::Val{false}) = checknonsingular(info, NoPivot())
 else
