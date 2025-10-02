@@ -11,7 +11,7 @@ Base.setindex!(A::MyMatrix, v, k::Int, j::Int) = setindex!(A.A, v, k, j)
 Base.size(A::MyMatrix) = size(A.A)
 Base.strides(A::MyMatrix) = strides(A.A)
 Base.unsafe_convert(::Type{Ptr{T}}, A::MyMatrix) where T = Base.unsafe_convert(Ptr{T}, A.A)
-MemoryLayout(::Type{MyMatrix}) = DenseColumnMajor()
+ArrayLayouts.MemoryLayout(::Type{MyMatrix}) = DenseColumnMajor()
 
 struct MyVector <: LayoutVector{Float64}
     A::Vector{Float64}
@@ -22,7 +22,7 @@ Base.setindex!(A::MyVector, v, k::Int) = setindex!(A.A, v, k)
 Base.size(A::MyVector) = size(A.A)
 Base.strides(A::MyVector) = strides(A.A)
 Base.unsafe_convert(::Type{Ptr{T}}, A::MyVector) where T = Base.unsafe_convert(Ptr{T}, A.A)
-MemoryLayout(::Type{MyVector}) = DenseColumnMajor()
+ArrayLayouts.MemoryLayout(::Type{MyVector}) = DenseColumnMajor()
 
 include("test_ul.jl")
 include("test_qr.jl")
