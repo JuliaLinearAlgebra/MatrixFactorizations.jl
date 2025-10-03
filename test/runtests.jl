@@ -2,6 +2,10 @@ using MatrixFactorizations, LinearAlgebra, Random, ArrayLayouts, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
 using MatrixFactorizations: QRCompactWYQLayout, AbstractQtype
 
+if VERSION < v"1.12-"
+    const FieldError = ErrorException
+end
+
 struct MyMatrix <: LayoutMatrix{Float64}
     A::Matrix{Float64}
 end
