@@ -2,10 +2,15 @@ using MatrixFactorizations, LinearAlgebra, Random, ArrayLayouts, Test
 using LinearAlgebra: BlasComplex, BlasFloat, BlasReal, rmul!, lmul!, require_one_based_indexing, checksquare
 using MatrixFactorizations: QRCompactWYQLayout, AbstractQtype
 
+if VERSION < v"1.12-"
+    const FieldError = ErrorException
+end
+
 struct MyMatrix <: LayoutMatrix{Float64}
     A::Matrix{Float64}
 end
 
+Base.elsize(::Type{MyMatrix}) = sizeof(Float64)
 Base.getindex(A::MyMatrix, k::Int, j::Int) = A.A[k,j]
 Base.setindex!(A::MyMatrix, v, k::Int, j::Int) = setindex!(A.A, v, k, j)
 Base.size(A::MyMatrix) = size(A.A)
@@ -17,6 +22,7 @@ struct MyVector <: LayoutVector{Float64}
     A::Vector{Float64}
 end
 
+Base.elsize(::Type{MyVector}) = sizeof(Float64)
 Base.getindex(A::MyVector, k::Int) = A.A[k]
 Base.setindex!(A::MyVector, v, k::Int) = setindex!(A.A, v, k)
 Base.size(A::MyVector) = size(A.A)
