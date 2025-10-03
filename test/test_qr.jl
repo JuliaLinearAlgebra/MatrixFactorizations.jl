@@ -47,7 +47,7 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
                     qra   = @inferred qrunblocked(a)
                     @inferred qrunblocked(a)
                     q, r = qra.Q, qra.R
-                    @test_throws ErrorException qra.Z
+                    @test_throws FieldError qra.Z
                     @test q[1,1] ≈ Matrix(q)[1,1]
                     @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
@@ -74,7 +74,7 @@ rectangularQ(Q::LinearAlgebra.AbstractQ) = Matrix(Q) # convert(Array, Q)
                     qra   = @inferred qrunblocked(a[:, 1:n1], Val(false))
                     @inferred qrunblocked(a[:, 1:n1], Val(false))
                     q,r   = qra.Q, qra.R
-                    @test_throws ErrorException qra.Z
+                    @test_throws FieldError qra.Z
                     @test q[1,1] ≈ Matrix(q)[1,1]
                     @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
