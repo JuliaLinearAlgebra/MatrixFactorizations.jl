@@ -29,7 +29,7 @@ import Base: convert, size, view, unsafe_indices,
 import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_layoutrmul,
    MemoryLayout, adjointlayout, AbstractQLayout, QRPackedQLayout,
    QRCompactWYQLayout, AdjQRCompactWYQLayout, QRPackedLayout, AdjQRPackedQLayout,
-   layout_getindex, rowsupport, colsupport
+   layout_getindex, rowsupport, colsupport, LayoutVecOrMats
 
 
 export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, reversecholesky, reversecholesky!, ReverseCholesky
@@ -54,6 +54,9 @@ abstract type LayoutQ{T} <: AbstractQ{T} end
 @_layoutlmul AdjointQtype{<:Any,<:LayoutQ}
 @_layoutrmul LayoutQ
 @_layoutrmul AdjointQtype{<:Any,<:LayoutQ}
+
+
+LinearAlgebra.lmul!(Q::LayoutQ, B::LayoutVecOrMats) = ArrayLayouts.lmul!(Q, B)
 
 LinearAlgebra.copymutable(Q::LayoutQ) = copymutable_size(size(Q), Q)
 copymutable_size(sz, Q) = lmul!(Q, Matrix{eltype(Q)}(I, sz))
