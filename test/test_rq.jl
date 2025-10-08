@@ -21,6 +21,10 @@ using MatrixFactorizations: RQPackedQ
 using MatrixFactorizations: rq, rq!
 const Our=MatrixFactorizations
 
+if !isdefined(Base, :FieldError)
+    const FieldError = ErrorException
+end
+
 @testset "RQ" begin
     @testset "LAPACK $elty" for elty in (Float32,Float64,ComplexF32,ComplexF64)
         @testset "Compare with LAPACK (square $elty)" begin
@@ -91,7 +95,7 @@ const Our=MatrixFactorizations
                     rqa   = @inferred rq(a)
                     @inferred rq(a)
                     q, r  = rqa.Q, rqa.R
-                    @test_throws ErrorException rqa.Z
+                    @test_throws FieldError rqa.Z
                     @test q[1,1] ≈ Matrix(q)[1,1]
                     @test q[1:2,1:2] ≈ Matrix(q)[1:2,1:2]
                     @test q'*q ≈ Matrix(I, a_1, a_1)
