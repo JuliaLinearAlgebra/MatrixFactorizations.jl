@@ -92,7 +92,7 @@ end
             if eltya != Int
                 @test Factorization{eltya}(capd) === capd
                 if eltya <: Real
-                    @test Array(Factorization{complex(eltya)}(capd)) ≈ Array(factorize(complex(apd)))
+                    @test Array(Factorization{complex(eltya)}(capd)) ≈ apd
                     @test eltype(Factorization{complex(eltya)}(capd)) == complex(eltya)
                 end
             end
