@@ -16,7 +16,7 @@ function unary_ops_tests(a, ca, tol; n=size(a, 1))
     @test logabsdet_ca[1] ≈ logabsdet_a[1]
     @test logabsdet_ca[2] ≈ logabsdet_a[2]
     @test isposdef(ca)
-    @test_throws ErrorException ca.Z
+    @test_throws FieldError ca.Z
     @test size(ca) == size(a)
     @test Array(copy(ca)) ≈ a
 end
@@ -92,7 +92,7 @@ end
             if eltya != Int
                 @test Factorization{eltya}(capd) === capd
                 if eltya <: Real
-                    @test Array(Factorization{complex(eltya)}(capd)) ≈ Array(factorize(complex(apd)))
+                    @test Array(Factorization{complex(eltya)}(capd)) ≈ apd
                     @test eltype(Factorization{complex(eltya)}(capd)) == complex(eltya)
                 end
             end

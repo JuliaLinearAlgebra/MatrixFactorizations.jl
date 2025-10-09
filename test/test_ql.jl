@@ -59,7 +59,7 @@ using MatrixFactorizations, ArrayLayouts, Test
                     qla   = @inferred ql(a)
                     @inferred ql(a)
                     q, l  = qla.Q, qla.L
-                    @test_throws ErrorException qla.Z
+                    @test_throws FieldError qla.Z
                     @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
                     @test q*squareQ(q)' ≈ Matrix(I, a_1, a_1)
                     @test q'*Matrix(1.0I, a_1, a_1)' ≈ squareQ(q)'
@@ -84,7 +84,7 @@ using MatrixFactorizations, ArrayLayouts, Test
                     qla   = @inferred ql(a[:, 1:n1], Val(false))
                     @inferred ql(a[:, 1:n1], Val(false))
                     q,l   = qla.Q, qla.L
-                    @test_throws ErrorException qla.Z
+                    @test_throws FieldError qla.Z
                     @test q'*squareQ(q) ≈ Matrix(I, a_1, a_1)
                     @test q'*rectangularQ(q) ≈ Matrix(I, a_1, n1)
                     @test q*l ≈ a[:, 1:n1]

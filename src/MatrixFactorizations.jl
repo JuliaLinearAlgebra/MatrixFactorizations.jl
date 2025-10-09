@@ -10,7 +10,7 @@ import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!
    chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
    AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare,
    checknonsingular, ipiv2perm, copytri!, issuccess, RealHermSymComplexHerm,
-   cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype
+   cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype, copy_similar, choltype
 
 
 using LinearAlgebra: TransposeFactorization, AdjointFactorization

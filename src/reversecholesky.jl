@@ -136,7 +136,12 @@ function reversecholesky!(A::AbstractMatrix, ::NoPivot = NoPivot(); check::Bool 
     end
 end
 
-reversecholcopy(A) = cholcopy(A)
+# can't use chol_copy in 1.12 since it makes BigFloat fill with #undef
+reversecholcopy(A::Symmetric, S=choltype(A)) = Symmetric(copy_similar(A, S), LinearAlgebra.sym_uplo(A.uplo))
+reversecholcopy(A::Hermitian, S=choltype(A)) = Hermitian(copy_similar(A, S), LinearAlgebra.sym_uplo(A.uplo))
+reversecholcopy(A::Diagonal, S=choltype(A)) = Diagonal(copy_similar(diag(A), S))
+reversecholcopy(A::RealHermSymComplexHerm{<:Any,<:Diagonal}, S=choltype(A)) = Diagonal(copy_similar(diag(A), S))
+reversecholcopy(A, S=choltype(A)) = copy_similar(A, S)
 function reversecholcopy(A::SymTridiagonal)
     T = LinearAlgebra.choltype(A)
     Symmetric(Bidiagonal(copymutable_oftype(A.dv, T), copymutable_oftype(A.ev, T), :U))
