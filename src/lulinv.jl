@@ -73,6 +73,7 @@ end
 
 LULinv(factors::AbstractMatrix{T}) where T = LULinv{T, typeof(factors)}(factors)
 LULinv{T}(factors::AbstractMatrix) where T = LULinv(convert(AbstractMatrix{T}, factors))
+LULinv{T}(F::LULinv) where T = LULinv{T}(F.factors)
 
 iterate(F::LULinv) = (F.L, Val(:U))
 iterate(F::LULinv, ::Val{:U}) = (F.U, Val(:done))
@@ -166,8 +167,10 @@ function lulinv!(A::Matrix{T}, λ::Vector{T}; rtol::Real = size(A, 1)*eps(real(f
                         push!(idx, k)
                     end
                 end
-                v[idx.+(i-1)] .= -F.L[idx, 1]
-                ldiv!(LowerTriangular(view(F.L, idx, idx)), view(v, idx.+(i-1)))
+                if !isempty(idx)
+                    v[idx.+(i-1)] .= -F.L[idx, 1]
+                    ldiv!(LowerTriangular(view(F.L, idx, idx)), view(v, idx.+(i-1)))
+                end
                 deleteat!(λ, j)
                 break
             end

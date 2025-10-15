@@ -86,19 +86,19 @@ using LinearAlgebra, MatrixFactorizations, Random, Test
     end
     @testset "REPL printing" begin
             bf = IOBuffer()
-            show(bf, "text/plain", lulinv([2 1; 1 2]))
+            show(bf, "text/plain", lulinv([1 0; 0 1]))
             seekstart(bf)
             @test String(take!(bf)) ==
 """
 LULinv{Float64, Matrix{Float64}}
 L factor:
 2×2 Matrix{Float64}:
-  1.0  0.0
- -1.0  1.0
+ 1.0  0.0
+ 0.0  1.0
 U factor:
 2×2 Matrix{Float64}:
- 1.0  1.0
- 0.0  3.0"""
+ 1.0  0.0
+ 0.0  1.0"""
     end
     @testset "propertynames" begin
         names = sort!(collect(string.(Base.propertynames(lulinv([2 1; 1 2])))))
@@ -110,5 +110,7 @@ U factor:
         A = [-150 334 778; -89 195 464; 5 -10 -27]
         F = lulinv(A, [17, -2, 3//1])
         @test A * F.L == F.L * F.U
+        G = LULinv{Float64}(F)
+        @test A * G.L ≈ G.L * G.U
     end
 end
