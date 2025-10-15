@@ -6,10 +6,10 @@ is the return type of [`lulinv`](@ref), the corresponding matrix factorization f
 
 The individual components of the factorization `F::LULinv` can be accessed via [`getproperty`](@ref):
 
-| Component | Description                              |
-|:----------|:-----------------------------------------|
-| `F.L`     | `L` (unit lower triangular) part of `UL` |
-| `F.U`     | `U` (upper triangular) part of `UL`      |
+| Component | Description                                 |
+|:----------|:--------------------------------------------|
+| `F.L`     | `L` (unit lower triangular) part of `LUL⁻¹` |
+| `F.U`     | `U` (upper triangular) part of `LUL⁻¹`      |
 
 Iterating the factorization produces the components `F.L` and `F.U`.
 
