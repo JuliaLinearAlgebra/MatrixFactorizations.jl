@@ -49,9 +49,9 @@ function QL{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
 end
 
 # iteration for destructuring into components
-Base.iterate(S::QL) = (S.Q, Val(:L))
-Base.iterate(S::QL, ::Val{:L}) = (S.L, Val(:done))
-Base.iterate(S::QL, ::Val{:done}) = nothing
+iterate(S::QL) = (S.Q, Val(:L))
+iterate(S::QL, ::Val{:L}) = (S.L, Val(:done))
+iterate(S::QL, ::Val{:done}) = nothing
 
 function generic_qlfactUnblocked!(A::AbstractMatrix{T}) where {T}
     require_one_based_indexing(A)
@@ -211,7 +211,7 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::QL)
     show(io, mime, F.L)
 end
 
-@inline function getL(F::QL, _) 
+@inline function getL(F::QL, _)
     m, n = size(F)
     tril!(getfield(F, :factors)[end-min(m,n)+1:end, 1:n], max(n-m,0))
 end
@@ -233,7 +233,7 @@ function getproperty(F::QL, d::Symbol)
     end
 end
 
-Base.propertynames(F::QL, private::Bool=false) =
+propertynames(F::QL, private::Bool=false) =
     (:L, :Q, (private ? fieldnames(typeof(F)) : ())...)
 
 
@@ -295,20 +295,20 @@ abstract type AbstractQLLayout <: MemoryLayout end
 """
     QLPackedLayout{SLAY,TLAY}()
 
-represents a Packed QL factorization whose 
+represents a Packed QL factorization whose
 factors are stored with layout SLAY and τ stored with layout TLAY
 """
 struct QLPackedLayout{SLAY,TLAY} <: AbstractQLLayout end
 struct QLPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
 struct AdjQLPackedQLayout{SLAY,TLAY} <: AbstractQLayout end
 
-MemoryLayout(::Type{<:QL{<:Any,Mat,Tau}}) where {Mat,Tau} = 
+MemoryLayout(::Type{<:QL{<:Any,Mat,Tau}}) where {Mat,Tau} =
     QLPackedLayout{typeof(MemoryLayout(Mat)),typeof(MemoryLayout(Tau))}()
 
 
 adjointlayout(::Type, ::QLPackedQLayout{SLAY,TLAY}) where {SLAY,TLAY} = AdjQLPackedQLayout{SLAY,TLAY}()
 
-MemoryLayout(::Type{<:QLPackedQ{<:Any,Mat,Tau}}) where {Mat,Tau} = 
+MemoryLayout(::Type{<:QLPackedQ{<:Any,Mat,Tau}}) where {Mat,Tau} =
     QLPackedQLayout{typeof(MemoryLayout(Mat)),typeof(MemoryLayout(Tau))}()
 
 colsupport(::QLPackedQLayout, Q, j) = minimum(colsupport(Q.factors, j)):size(Q,1)
@@ -378,7 +378,7 @@ end
 
 
 ### QBc/QcBc
-function materialize!(M::Rmul{<:Any,<:QLPackedQLayout}) 
+function materialize!(M::Rmul{<:Any,<:QLPackedQLayout})
     A,Q = M.A, M.B
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
@@ -406,8 +406,8 @@ function materialize!(M::Rmul{<:Any,<:QLPackedQLayout})
 end
 
 ### AQc
-function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout}) 
-    A,adjQ = M.A, M.B    
+function materialize!(M::Rmul{<:Any,<:AdjQLPackedQLayout})
+    A,adjQ = M.A, M.B
     Q = parent(adjQ)
     mQ, nQ = size(Q.factors)
     mA, nA = size(A,1), size(A,2)
@@ -525,5 +525,3 @@ function (\)(A::QL{T}, BIn::VecOrMat{Complex{T}}) where T<:BlasReal
     XX = reshape(collect(reinterpret(Complex{T}, copy(transpose(reshape(X, div(length(X), 2), 2))))), _ret_size(A, BIn))
     return _cut_B(XX, 1:n)
 end
-
-

@@ -52,9 +52,9 @@ QR{T}(factors::AbstractMatrix, τ::AbstractVector) where {T} =
 QR(F::LinearAlgebra.QR) = QR(F.factors, F.τ)
 
 # iteration for destructuring into components
-Base.iterate(S::QR) = (S.Q, Val(:R))
-Base.iterate(S::QR, ::Val{:R}) = (S.R, Val(:done))
-Base.iterate(S::QR, ::Val{:done}) = nothing
+iterate(S::QR) = (S.Q, Val(:R))
+iterate(S::QR, ::Val{:R}) = (S.R, Val(:done))
+iterate(S::QR, ::Val{:done}) = nothing
 
 
 function _qrfactUnblocked!(_, _, A::AbstractMatrix{T}, τ::AbstractVector) where {T}
@@ -138,7 +138,7 @@ function getproperty(F::QR, d::Symbol)
     end
 end
 
-Base.propertynames(F::QR, private::Bool=false) =
+propertynames(F::QR, private::Bool=false) =
     (:R, :Q, (private ? fieldnames(typeof(F)) : ())...)
 
 ldiv!(F::QR, B::AbstractVecOrMat) = ArrayLayouts.ldiv!(F, B)

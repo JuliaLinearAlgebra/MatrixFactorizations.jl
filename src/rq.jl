@@ -49,14 +49,14 @@ function RQ{T}(factors::AbstractMatrix, τ::AbstractVector) where {T}
 end
 
 # iteration for destructuring into components
-Base.iterate(S::RQ) = (S.R, Val(:Q))
-Base.iterate(S::RQ, ::Val{:Q}) = (S.Q, Val(:done))
-Base.iterate(S::RQ, ::Val{:done}) = nothing
+iterate(S::RQ) = (S.R, Val(:Q))
+iterate(S::RQ, ::Val{:Q}) = (S.Q, Val(:done))
+iterate(S::RQ, ::Val{:done}) = nothing
 
-Base.size(F::RQ, dim::Integer) = size(getfield(F, :factors), dim)
-Base.size(F::RQ) = size(getfield(F, :factors))
+size(F::RQ, dim::Integer) = size(getfield(F, :factors), dim)
+size(F::RQ) = size(getfield(F, :factors))
 
-function Base.getproperty(F::RQ, d::Symbol)
+function getproperty(F::RQ, d::Symbol)
     m, n = size(F)
     if d === :R
         if m <= n
@@ -95,7 +95,7 @@ AbstractArray(F::RQ) = AbstractMatrix(F)
 Matrix(F::RQ) = Array(AbstractArray(F))
 Array(F::RQ) = Matrix(F)
 
-function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, F::RQ)
+function show(io::IO, mime::MIME{Symbol("text/plain")}, F::RQ)
     summary(io, F); println(io)
     println(io, "R factor:")
     show(io, mime, F.R)
@@ -124,8 +124,8 @@ AbstractQ{T}(Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
 convert(::Type{AbstractQ{T}}, Q::RQPackedQ) where {T} = RQPackedQ{T}(Q)
 AbstractMatrix{T}(Q::RQPackedQ) where {T} = Matrix{T}(Q)
 
-Base.size(Q::RQPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 1 ? 2 : dim)
-Base.size(Q::RQPackedQ) = size(Q, 1), size(Q, 2)
+size(Q::RQPackedQ, dim::Integer) = size(getfield(Q, :factors), dim == 1 ? 2 : dim)
+size(Q::RQPackedQ) = size(Q, 1), size(Q, 2)
 
 function lmul!(A::RQPackedQ{T,<:StridedMatrix}, B::StridedVecOrMat{T}) where {T<:BlasFloat}
     m,n = size(A.factors)

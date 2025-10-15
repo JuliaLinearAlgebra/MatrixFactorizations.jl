@@ -1,4 +1,4 @@
-# This file is based on JuliaLang/LinearAlgebra/src/lu.jl, a part of Julia. 
+# This file is based on JuliaLang/LinearAlgebra/src/lu.jl, a part of Julia.
 # License is MIT: https://julialang.org/license
 
 ####################
@@ -75,10 +75,10 @@ end
 
 
 # iteration for destructuring into components
-Base.iterate(S::UL) = (S.U, Val(:L))
-Base.iterate(S::UL, ::Val{:L}) = (S.L, Val(:p))
-Base.iterate(S::UL, ::Val{:p}) = (S.p, Val(:done))
-Base.iterate(S::UL, ::Val{:done}) = nothing
+iterate(S::UL) = (S.U, Val(:L))
+iterate(S::UL, ::Val{:L}) = (S.L, Val(:p))
+iterate(S::UL, ::Val{:p}) = (S.p, Val(:done))
+iterate(S::UL, ::Val{:done}) = nothing
 
 if isdefined(LinearAlgebra, :AdjointFactorization) # VERSION >= v"1.10-"
     adjoint(F::UL{<:Real}) = LinearAlgebra.TransposeFactorization(F)
@@ -291,7 +291,7 @@ end
 
 const _ul = ul_layout
 
-ul(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true); check::Bool = true) where T = 
+ul(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true); check::Bool = true) where T =
     _ul(MemoryLayout(A), A, pivot; check=check)
 
 ul(S::UL) = S
@@ -323,7 +323,7 @@ function getU(F::UL{T}, _) where T
 end
 
 getL(F::UL) = getL(F, size(F.factors))
-function getL(F::UL, _) 
+function getL(F::UL, _)
     m, n = size(F)
     tril!(layout_getindex(getfield(F, :factors),1:min(m,n),1:n))
 end
@@ -343,7 +343,7 @@ function getproperty(F::UL{T,<:AbstractMatrix}, d::Symbol) where T
     end
 end
 
-Base.propertynames(F::UL, private::Bool=false) =
+propertynames(F::UL, private::Bool=false) =
     (:L, :U, :p, :P, (private ? fieldnames(typeof(F)) : ())...)
 
 issuccess(F::UL) = F.info == 0

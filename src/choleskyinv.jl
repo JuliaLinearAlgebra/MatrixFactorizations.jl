@@ -23,7 +23,7 @@ end
  factorization.
 
  The two factorizations are obtained in one pass and this is faster
- then calling Julia's [chelosky](https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/#LinearAlgebra.cholesky)
+ then calling Julia's [cholesky](https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/#LinearAlgebra.cholesky)
  function and inverting the lower factor for small matrices.
 
  Input matrix `P` may be of type `Matrix` or `Hermitian`. Since only the
@@ -118,7 +118,7 @@ function choleskyinv!(P::Matrix{T};
 			tol::Real = √eps(real(T))) where T<:Union{Real, Complex}
 	LinearAlgebra.require_one_based_indexing(P)
 	n = LinearAlgebra.checksquare(P)
-	
+
 	@inbounds for j=1:n-1
 		check && abs2(P[j, j])<tol && throw(LinearAlgebra.PosDefException(1))
 		for i=j+1:n

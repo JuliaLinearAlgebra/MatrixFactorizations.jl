@@ -65,9 +65,9 @@ function PolarDecomposition{T}(U::AbstractArray{T}, H::AbstractArray{T}, niter=1
     PolarDecomposition{T,typeof(U),typeof(H)}(U,H,niter,converged)
 end
 
-Base.iterate(P::PolarDecomposition) = (P.U, Val(:U))
-Base.iterate(P::PolarDecomposition, ::Val{:U}) = (P.H, Val(:done))
-Base.iterate(P::PolarDecomposition, ::Val{:done}) = nothing
+iterate(P::PolarDecomposition) = (P.U, Val(:U))
+iterate(P::PolarDecomposition, ::Val{:U}) = (P.H, Val(:done))
+iterate(P::PolarDecomposition, ::Val{:done}) = nothing
 
 module Polar
 using LinearAlgebra

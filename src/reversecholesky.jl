@@ -34,9 +34,9 @@ ReverseCholesky(U::UpperTriangular{T}) where {T} = ReverseCholesky{T,typeof(U.da
 ReverseCholesky(L::LowerTriangular{T}) where {T} = ReverseCholesky{T,typeof(L.data)}(L.data, 'L', 0)
 
 # iteration for destructuring into components
-Base.iterate(C::ReverseCholesky) = (C.U, Val(:U))
-Base.iterate(C::ReverseCholesky, ::Val{:U}) = (C.L, Val(:done))
-Base.iterate(C::ReverseCholesky, ::Val{:done}) = nothing
+iterate(C::ReverseCholesky) = (C.U, Val(:U))
+iterate(C::ReverseCholesky, ::Val{:U}) = (C.L, Val(:done))
+iterate(C::ReverseCholesky, ::Val{:done}) = nothing
 
 ## Non BLAS/LAPACK element types (generic)
 function reversecholesky_layout!(_, A::AbstractMatrix, ::Type{UpperTriangular})
@@ -230,7 +230,7 @@ function getproperty(C::ReverseCholesky, d::Symbol)
         return getfield(C, d)
     end
 end
-Base.propertynames(F::ReverseCholesky, private::Bool=false) =
+propertynames(F::ReverseCholesky, private::Bool=false) =
     (:U, :L, :UL, (private ? fieldnames(typeof(F)) : ())...)
 
 

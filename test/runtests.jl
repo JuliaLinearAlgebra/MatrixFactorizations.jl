@@ -36,5 +36,6 @@ include("test_ql.jl")
 include("test_rq.jl")
 include("test_polar.jl")
 include("test_reversecholesky.jl")
+include("test_lulinv.jl")
 
 include("test_banded.jl")
