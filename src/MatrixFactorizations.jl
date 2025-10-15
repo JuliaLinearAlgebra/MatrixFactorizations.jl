@@ -1,6 +1,6 @@
 module MatrixFactorizations
 using Base, LinearAlgebra, ArrayLayouts
-import Base: axes, axes1, getproperty, iterate, tail, oneto
+import Base: axes, axes1, getproperty, propertynames, iterate, tail, oneto
 import LinearAlgebra: BlasInt, BlasReal, BlasFloat, BlasComplex, axpy!,
    copy_oftype, checksquare, adjoint, transpose, AdjOrTrans, HermOrSym,
    det, logdet, logabsdet, isposdef
@@ -8,7 +8,7 @@ import LinearAlgebra.LAPACK: chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
    qr, axpy!, ldiv!, rdiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
    chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
-   AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing, checksquare,
+   AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing,
    checknonsingular, ipiv2perm, copytri!, issuccess, RealHermSymComplexHerm,
    cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype, copy_similar, choltype
 
@@ -32,8 +32,9 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
    layout_getindex, rowsupport, colsupport
 
 
-export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL, reversecholesky, reversecholesky!, ReverseCholesky
-
+export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL,
+    reversecholesky, reversecholesky!, ReverseCholesky,
+    lulinv, lulinv!, LULinv
 
 const AdjointQtype = isdefined(LinearAlgebra, :AdjointQ) ? LinearAlgebra.AdjointQ : Adjoint
 const AbstractQtype = AbstractQ <: AbstractMatrix ? AbstractMatrix : AbstractQ
@@ -123,5 +124,6 @@ include("ql.jl")
 include("rq.jl")
 include("polar.jl")
 include("reversecholesky.jl")
+include("lulinv.jl")
 
 end #module
