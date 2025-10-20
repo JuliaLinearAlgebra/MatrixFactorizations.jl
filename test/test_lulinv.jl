@@ -134,6 +134,7 @@ U factor:
         @test p == [2, 1]
         @test A[p, p] == L*U/L
         F = lulinv(A, λ)
-        F\A
+        @test F\A ≈ I
+        @test A/F ≈ I
     end
 end
