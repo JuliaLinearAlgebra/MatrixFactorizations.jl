@@ -10,6 +10,8 @@ The individual components of the factorization `F::LULinv` can be accessed via [
 |:----------|:--------------------------------------------|
 | `F.L`     | `L` (unit lower triangular) part of `LUL⁻¹` |
 | `F.U`     | `U` (upper triangular) part of `LUL⁻¹`      |
+| `F.p`     | (right) permutation `Vector`                |
+| `F.P`     | (right) permutation `Matrix`                |
 
 Iterating the factorization produces the components `F.L` and `F.U`.
 
@@ -31,12 +33,12 @@ U factor:
  -0.772002  3.0
   0.0       7.772
 
-julia> F.L * F.U / F.L ≈ A
+julia> F.L * F.U / F.L ≈ A[F.p, F.p]
 true
 
-julia> l, u = lulinv(A); # destructuring via iteration
+julia> l, u, p = lulinv(A); # destructuring via iteration
 
-julia> l == F.L && u == F.U
+julia> l == F.L && u == F.U && p == F.p
 true
 
 julia> A = [-150 334 778; -89 195 464; 5 -10 -27]
@@ -58,25 +60,27 @@ U factor:
   0    -2     75
   0     0      3
 
-julia> F.L * F.U / F.L == A
+julia> F.L * F.U / F.L == A[F.p, F.p]
 true
 ```
 """
-struct LULinv{T, S <: AbstractMatrix{T}} <: Factorization{T}
+struct LULinv{T, S <: AbstractMatrix{T}, IPIV <: AbstractVector{<:Integer}} <: Factorization{T}
     factors::S
-    function LULinv{T, S}(factors) where {T, S <: AbstractMatrix{T}}
+    ipiv::IPIV
+    function LULinv{T, S, IPIV}(factors, ipiv) where {T, S <: AbstractMatrix{T}, IPIV <: AbstractVector{<:Integer}}
         require_one_based_indexing(factors)
-        new{T, S}(factors)
+        new{T, S, IPIV}(factors, ipiv)
     end
 end
 
 
-LULinv(factors::AbstractMatrix{T}) where T = LULinv{T, typeof(factors)}(factors)
-LULinv{T}(factors::AbstractMatrix) where T = LULinv(convert(AbstractMatrix{T}, factors))
-LULinv{T}(F::LULinv) where T = LULinv{T}(F.factors)
+LULinv(factors::AbstractMatrix{T}, ipiv::AbstractVector{<:Integer}) where T = LULinv{T, typeof(factors), typeof(ipiv)}(factors, ipiv)
+LULinv{T}(factors::AbstractMatrix, ipiv::AbstractVector{<:Integer}) where T = LULinv(convert(AbstractMatrix{T}, factors), ipiv)
+LULinv{T}(F::LULinv) where T = LULinv{T}(F.factors, F.ipiv)
 
 iterate(F::LULinv) = (F.L, Val(:U))
-iterate(F::LULinv, ::Val{:U}) = (F.U, Val(:done))
+iterate(F::LULinv, ::Val{:U}) = (F.U, Val(:p))
+iterate(F::LULinv, ::Val{:p}) = (F.p, Val(:done))
 iterate(F::LULinv, ::Val{:done}) = nothing
 
 
@@ -116,17 +120,22 @@ function getU(F::LULinv)
 end
 
 function getproperty(F::LULinv{T, <: AbstractMatrix}, d::Symbol) where T
+    n = size(F, 1)
     if d === :L
         return getL(F)
     elseif d === :U
         return getU(F)
+    elseif d === :p
+        return getfield(F, :ipiv)
+    elseif d === :P
+        return Matrix{T}(I, n, n)[:, F.p]
     else
         getfield(F, d)
     end
 end
 
 propertynames(F::LULinv, private::Bool=false) =
-    (:L, :U, (private ? fieldnames(typeof(F)) : ())...)
+    (:L, :U, :p, :P, (private ? fieldnames(typeof(F)) : ())...)
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::LULinv)
     summary(io, F); println(io)
@@ -137,42 +146,60 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::LULinv)
 end
 
 
-lulinv(A::AbstractMatrix; kwds...) = lulinv(A, eigvals(A); kwds...)
-function lulinv(A::AbstractMatrix{T}, λ::AbstractVector{T}; kwds...) where T
+lulinv(A::AbstractMatrix, pivot::Union{Val{false}, Val{true}}=Val(true); kwds...) = lulinv(A, eigvals(A), pivot; kwds...)
+function lulinv(A::AbstractMatrix{T}, λ::AbstractVector{T}, pivot::Union{Val{false}, Val{true}}=Val(true); kwds...) where T
     S = lulinvtype(T)
-    lulinv!(copy_oftype(A, S), copy_oftype(λ, S); kwds...)
+    lulinv!(copy_oftype(A, S), copy_oftype(λ, S), pivot; kwds...)
 end
-function lulinv(A::AbstractMatrix{T1}, λ::AbstractVector{T2}; kwds...) where {T1, T2}
+function lulinv(A::AbstractMatrix{T1}, λ::AbstractVector{T2}, pivot::Union{Val{false}, Val{true}}=Val(true); kwds...) where {T1, T2}
     T = promote_type(T1, T2)
     S = lulinvtype(T)
-    lulinv!(copy_oftype(A, S), copy_oftype(λ, S); kwds...)
+    lulinv!(copy_oftype(A, S), copy_oftype(λ, S), pivot; kwds...)
 end
 
-function lulinv!(A::Matrix{T}, λ::Vector{T}; rtol::Real = size(A, 1)*eps(real(float(oneunit(T))))) where T
+function lulinv!(A::Matrix{T}, λ::Vector{T}, ::Val{Pivot} = Val(true); rtol::Real = size(A, 1)*eps(real(float(oneunit(T))))) where {T, Pivot}
     n = checksquare(A)
     n == length(λ) || throw(ArgumentError("Eigenvalue count does not match matrix dimensions."))
     v = zeros(T, n)
-    for i in 1:n-1
-        # We must find an eigenvector with nonzero "first" entry. A failed UL factorization of A-λI reveals this vector provided L₁₁ == 0.
-        for j in 1:length(λ)
-            F = ul!(view(A, i:n, i:n) - λ[j]*I; check=false)
-            nrm = norm(F.L)
-            if norm(F.L[1]) ≤ rtol*nrm # v[i] is a free parameter; we set it to 1.
-                fill!(v, zero(T))
-                v[i] = one(T)
-                # Next, we must scan the remaining free parameters, set them to 0, so that we find a nonsingular lower-triangular linear system for the nontrivial remaining part of the eigenvector.
-                idx = Int[]
-                for k in 2:n+1-i
-                    if norm(F.L[k, k]) > rtol*nrm
-                        push!(idx, k)
-                    end
+    ipiv = collect(1:n)
+    for i in 1:n
+        F = ul!(view(A, i:n, i:n) - λ[i]*I; check = false)
+        nrm = norm(F.L)
+        if Pivot
+            ip = n+1-i
+            while (ip > 1) && (norm(F.L[ip, ip]) > rtol*nrm)
+                ip -= 1
+            end
+            fill!(v, zero(T))
+            v[i] = one(T)
+            idx = ip+1:n+1-i
+            if !isempty(idx)
+                v[idx.+(i-1)] .= -F.L[idx, ip]
+                ldiv!(LowerTriangular(view(F.L, idx, idx)), view(v, idx.+(i-1)))
+            end
+            ip = ip+i-1
+            if ip ≠ i
+                tmp = ipiv[i]
+                ipiv[i] = ipiv[ip]
+                ipiv[ip] = tmp
+                for j in 1:n
+                    tmp = A[i, j]
+                    A[i, j] = A[ip, j]
+                    A[ip, j] = tmp
                 end
-                if !isempty(idx)
-                    v[idx.+(i-1)] .= -F.L[idx, 1]
-                    ldiv!(LowerTriangular(view(F.L, idx, idx)), view(v, idx.+(i-1)))
+                for j in 1:n
+                    tmp = A[j, i]
+                    A[j, i] = A[j, ip]
+                    A[j, ip] = tmp
                 end
-                deleteat!(λ, j)
-                break
+            end
+        else
+            fill!(v, zero(T))
+            v[i] = one(T)
+            idx = 2:n+1-i
+            if !isempty(idx)
+                v[idx.+(i-1)] .= -F.L[idx, 1]
+                ldiv!(LowerTriangular(view(F.L, idx, idx)), view(v, idx.+(i-1)))
             end
         end
         for k in 1:n
@@ -189,17 +216,23 @@ function lulinv!(A::Matrix{T}, λ::Vector{T}; rtol::Real = size(A, 1)*eps(real(f
             A[k, i] = v[k]
         end
     end
-    return LULinv(A)
+    return LULinv(A, ipiv)
 end
 
-function ldiv!(F::LULinv, B::AbstractVecOrMat)
-    L = UnitLowerTriangular(F.factors)
-    return lmul!(L, ldiv!(UpperTriangular(F.factors), ldiv!(L, B)))
+function ldiv!(A::LULinv, B::AbstractVecOrMat)
+    B .= B[invperm(A.p), :] # Todo: fix me
+    L = UnitLowerTriangular(A.factors)
+    lmul!(L, ldiv!(UpperTriangular(A.factors), ldiv!(L, B)))
+    B .= B[A.p, :] # Todo: fix me
+    return B
 end
 
-function rdiv!(B::AbstractVecOrMat, F::LULinv)
-    L = UnitLowerTriangular(F.factors)
-    return rdiv!(rdiv!(rmul!(B, L), UpperTriangular(F.factors)), L)
+function rdiv!(A::AbstractVecOrMat, B::LULinv)
+    A .= A[:, B.p] # Todo: fix me
+    L = UnitLowerTriangular(B.factors)
+    rdiv!(rdiv!(rmul!(A, L), UpperTriangular(B.factors)), L)
+    A .= A[:, invperm(B.p)] # Todo: fix me
+    return A
 end
 
 det(F::LULinv) = det(UpperTriangular(F.factors))
