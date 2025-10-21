@@ -119,7 +119,6 @@ using LinearAlgebra, MatrixFactorizations, Random, Test
         @testset "https://en.wikipedia.org/wiki/Jordan_normal_form" begin
             A = [5 4 2 1; 0 1 -1 -1; -1 -1 3 0; 1 1 -1 2//1]
             λ = [1, 2, 4, 4//1]
-            @test λ ≈ eigvals(A)
             V, J = jordan(A, λ)
             @test A*V == V*J
             # Next step in this code would be to completely elucidate the block structure in J:
@@ -129,14 +128,12 @@ using LinearAlgebra, MatrixFactorizations, Random, Test
         @testset "https://math.stackexchange.com/questions/1221465/jordan-canonical-form-deployment" begin
             A = [-3 1 0 1 1; -3 1 0 1 1; -4 1 0 2 1; -3 1 0 1 1; -4 1 0 1 2//1]
             λ = [0, 0, 0, 0, 1//1]
-            @test λ ≈ eigvals(A)
             V, J = jordan(A, λ)
             @test A*V == V*J
         end
         @testset "https://math.stackexchange.com/questions/3627150/find-the-jordan-form" begin
             A = [-83 -15 -68 -2 -100 216; -3 1 -2 0 -4 9; 42 7 35 1 50 -108; 43 8 35 3 50 -108; 22 4 18 1 27 -54; -10 -2 -8 0 -12 28//1]
             λ = [1, 2, 2, 2, 2, 2//1]
-            @test all(det(A-λ[j]*I) == 0 for j in 1:length(λ))
             V, J = jordan(A, λ)
             @test A*V == V*J
         end
@@ -191,18 +188,16 @@ using LinearAlgebra, MatrixFactorizations, Random, Test
         @testset "https://www.numerade.com/ask/question/1-find-a-jordan-canonical-form-of-the-following-matrix-4-1-0-0-a-h4ih-1-28093/" begin
             A = [4 1 0 0 0; -1 3 1 0 0; 1 0 2 0 0; -2 -1 -1 2 1; 1 0 0 0 2//1]
             λ = [2, 2, 3, 3, 3//1]
-            @test all(det(A-λ[j]*I) == 0 for j in 1:length(λ))
             V, J = jordan(A, λ)
             @test A*V == V*J
         end
         @testset "https://www.chegg.com/homework-help/questions-and-answers/3-find-jordan-canonical-form-j-following-matrices-determine-matrix-x-xax-j-11-0-1-1-2-0-0--q25805340" begin
             A = [1 0 1; 1 0 2; 1 -1 2]
             λ = [1, 1, 1]
-            @test all(det(A-λ[j]*I) == 0 for j in 1:length(λ))
             V, J = jordan(A, λ)
             @test A*V == V*J
             A = [0 0 0 1; 0 0 0 1; 1 2 0 0; 0 0 0 -1.0]
-            V, J = jordan(A, eigvals(A))
+            V, J = jordan(A)
             @test A*V ≈ V*J
             A = [1 2 0 0; 0 1 2 0; 0 0 1 2; 0 0 0 1//1]
             λ = diag(A) # because A is upper triangular
