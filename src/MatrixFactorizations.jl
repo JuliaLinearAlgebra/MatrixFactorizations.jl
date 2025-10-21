@@ -34,7 +34,7 @@ import ArrayLayouts: reflector!, reflectorApply!, materialize!, @_layoutlmul, @_
 
 export ul, ul!, ql, ql!, qrunblocked, qrunblocked!, UL, QL,
     reversecholesky, reversecholesky!, ReverseCholesky,
-    lulinv, lulinv!, LULinv
+    lulinv, lulinv!, LULinv, jordan, Jordan
 
 const AdjointQtype = isdefined(LinearAlgebra, :AdjointQ) ? LinearAlgebra.AdjointQ : Adjoint
 const AbstractQtype = AbstractQ <: AbstractMatrix ? AbstractMatrix : AbstractQ
@@ -125,5 +125,6 @@ include("rq.jl")
 include("polar.jl")
 include("reversecholesky.jl")
 include("lulinv.jl")
+include("jordan.jl")
 
 end #module
