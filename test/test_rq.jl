@@ -130,7 +130,7 @@ end
                     @test_throws DimensionMismatch rmul!(Matrix{eltya}(I, n1+1, n1+1),q)
                     @test rmul!(copy(q), adjoint(q)) ≈ Matrix(I, n1, n1)
                     @test_throws DimensionMismatch rmul!(Matrix{eltya}(I, n1+1, n1+1),adjoint(q))
-                    @test_throws ErrorException size(q,-1)
+                    @test_throws (VERSION < v"1.13-" ? ErrorException : BoundsError) size(q,-1)
                     @test_throws DimensionMismatch q * Matrix{Int8}(I, n+4, n+4)
                 end
             end
