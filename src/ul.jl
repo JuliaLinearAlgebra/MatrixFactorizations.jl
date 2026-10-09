@@ -90,7 +90,7 @@ else
 end
 
 # AbstractMatrix
-function ul!(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}} = Val(true);
+function ul!(A::AbstractMatrix{T}, pivot::Union{NoPivot, RowMaximum} = RowMaximum();
              check::Bool = true) where T<:BlasFloat
     return generic_ulfact!(A, pivot; check = check)
 end
@@ -99,15 +99,25 @@ end
 #     ul!(A.data, pivot; check = check)
 # end
 
+# Val(true)/Val(false) are the deprecated pivot arguments
+_ulpivot(::Val{true}) = RowMaximum()
+_ulpivot(::Val{false}) = NoPivot()
+_ulval(::RowMaximum) = Val(true)
+_ulval(::NoPivot) = Val(false)
+
+function ul!(A::AbstractMatrix, pivot::Union{Val{false}, Val{true}}; check::Bool = true)
+    Base.depwarn("ul!(A, $pivot) is deprecated, use ul!(A, $(_ulpivot(pivot))) instead.", :ul!)
+    ul!(A, _ulpivot(pivot); check = check)
+end
+
 if VERSION < v"1.11-"
-    _checknonsingular(info, ::Val{true}) = checknonsingular(info, RowMaximum())
-    _checknonsingular(info, ::Val{false}) = checknonsingular(info, NoPivot())
+    _checknonsingular(info, pivot) = checknonsingular(info, pivot)
 else
     _checknonsingular(info, _) = checknonsingular(info)
 end
 
 """
-    ul!(A, pivot=Val(true); check = true) -> UL
+    ul!(A, pivot=RowMaximum(); check = true) -> UL
 
 `ul!` is the same as [`ul`](@ref), but saves space by overwriting the
 input `A`, instead of creating a copy. An [`InexactError`](@ref)
@@ -143,10 +153,11 @@ Stacktrace:
 [...]
 ```
 """
-ul!(A::AbstractMatrix, pivot::Union{Val{false}, Val{true}} = Val(true); check::Bool = true) =
+ul!(A::AbstractMatrix, pivot::Union{NoPivot, RowMaximum} = RowMaximum(); check::Bool = true) =
     generic_ulfact!(A, pivot; check = check)
-function generic_ulfact!(A::AbstractMatrix{T}, ::Val{Pivot} = Val(true);
-                         check::Bool = true) where {T,Pivot}
+function generic_ulfact!(A::AbstractMatrix{T}, pivot::Union{NoPivot, RowMaximum} = RowMaximum();
+                         check::Bool = true) where T
+    Pivot = pivot isa RowMaximum
     m, n = size(A)
     minmn = min(m,n)
     info = 0
@@ -191,7 +202,7 @@ function generic_ulfact!(A::AbstractMatrix{T}, ::Val{Pivot} = Val(true);
             end
         end
     end
-    check && _checknonsingular(info, Val{Pivot}())
+    check && _checknonsingular(info, pivot)
     return UL{T}(A, ipiv, convert(BlasInt, info))
 end
 
@@ -216,7 +227,7 @@ end
 
 # for all other types we must promote to a type which is stable under division
 """
-    ul(A, pivot=Val(true); check = true) -> F::UL
+    ul(A, pivot=RowMaximum(); check = true) -> F::UL
 
 Compute the UL factorization of `A`.
 
@@ -283,16 +294,26 @@ julia> l == F.L && u == F.U && p == F.p
 true
 ```
 """
-function ul_layout(layout, A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true);
+function ul_layout(layout, A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}};
             check::Bool = true) where T
     S = ultype(T)
-    ul!(copy_oftype(A, S), pivot; check = check)
+    ul!(copy_oftype(A, S), _ulpivot(pivot); check = check)
 end
+
+# Forward to the Val method so that downstream overloads of ul_layout for
+# Val(true)/Val(false) are still called. Remove in next breaking release.
+ul_layout(layout, A::AbstractMatrix, pivot::Union{NoPivot, RowMaximum}=RowMaximum(); check::Bool = true) =
+    ul_layout(layout, A, _ulval(pivot); check = check)
 
 const _ul = ul_layout
 
-ul(A::AbstractMatrix{T}, pivot::Union{Val{false}, Val{true}}=Val(true); check::Bool = true) where T =
+ul(A::AbstractMatrix{T}, pivot::Union{NoPivot, RowMaximum}=RowMaximum(); check::Bool = true) where T =
     _ul(MemoryLayout(A), A, pivot; check=check)
+
+function ul(A::AbstractMatrix, pivot::Union{Val{false}, Val{true}}; check::Bool = true)
+    Base.depwarn("ul(A, $pivot) is deprecated, use ul(A, $(_ulpivot(pivot))) instead.", :ul)
+    ul(A, _ulpivot(pivot); check = check)
+end
 
 ul(S::UL) = S
 function ul(x::Number; check::Bool=true)

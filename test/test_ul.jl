@@ -27,8 +27,10 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
 
     @testset "UL simple test" begin
         A = randn(n,n)
-        U,L = ul(A,Val(false))
+        U,L = ul(A,NoPivot())
         @test U*L ≈ A
+        @test (@test_deprecated ul(A,Val(false))).factors == ul(A,NoPivot()).factors
+        @test (@test_deprecated ul(A,Val(true))).factors == ul(A,RowMaximum()).factors
         U,L,p = ul(A)
         @test (U*L) ≈ A[p,:]
         P = ul(A).P
@@ -198,18 +200,18 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
         @test !issuccess(ul(A; check = false))
         @test !issuccess(ul!(copy(A); check = false))
         if VERSION < v"1.11-"
-            @test_throws ZeroPivotException ul(A, Val(false))
-            @test_throws ZeroPivotException ul!(copy(A), Val(false))
-            @test_throws ZeroPivotException ul(A, Val(false); check = true)
-            @test_throws ZeroPivotException ul!(copy(A), Val(false); check = true)
+            @test_throws ZeroPivotException ul(A, NoPivot())
+            @test_throws ZeroPivotException ul!(copy(A), NoPivot())
+            @test_throws ZeroPivotException ul(A, NoPivot(); check = true)
+            @test_throws ZeroPivotException ul!(copy(A), NoPivot(); check = true)
         else
-            @test_throws SingularException ul(A, Val(false))
-            @test_throws SingularException ul!(copy(A), Val(false))
-            @test_throws SingularException ul(A, Val(false); check = true)
-            @test_throws SingularException ul!(copy(A), Val(false); check = true)
+            @test_throws SingularException ul(A, NoPivot())
+            @test_throws SingularException ul!(copy(A), NoPivot())
+            @test_throws SingularException ul(A, NoPivot(); check = true)
+            @test_throws SingularException ul!(copy(A), NoPivot(); check = true)
         end
-        @test !issuccess(ul(A, Val(false); check = false))
-        @test !issuccess(ul!(copy(A), Val(false); check = false))
+        @test !issuccess(ul(A, NoPivot(); check = false))
+        @test !issuccess(ul!(copy(A), NoPivot(); check = false))
         F = ul(A; check = false)
         @test sprint((io, x) -> show(io, "text/plain", x), F) ==
             "Failed factorization of type $(typeof(F))"
@@ -385,10 +387,10 @@ L factor:
     @testset "Tridiagonal" begin
         n = 10
         A = Tridiagonal(randn(n-1), randn(n), randn(n-1))+10I
-        U,L = ul(A, Val(false))
+        U,L = ul(A, NoPivot())
         @test U isa Bidiagonal
         @test L isa Bidiagonal
-        Ũ,L̃ = ul(Matrix(A), Val(false))
+        Ũ,L̃ = ul(Matrix(A), NoPivot())
         @test U ≈ Ũ
         @test L ≈ L̃
         @test U*L ≈ A
