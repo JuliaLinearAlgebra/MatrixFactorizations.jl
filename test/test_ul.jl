@@ -31,6 +31,8 @@ using LinearAlgebra: ldiv!, BlasReal, BlasInt, BlasFloat, rdiv!
         @test U*L ≈ A
         @test (@test_deprecated ul(A,Val(false))).factors == ul(A,NoPivot()).factors
         @test (@test_deprecated ul(A,Val(true))).factors == ul(A,RowMaximum()).factors
+        @test (@test_deprecated ul!(copy(A),Val(false))).factors == ul(A,NoPivot()).factors
+        @test (@test_deprecated ul!(copy(A),Val(true))).factors == ul(A,RowMaximum()).factors
         U,L,p = ul(A)
         @test (U*L) ≈ A[p,:]
         P = ul(A).P
