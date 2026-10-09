@@ -109,7 +109,7 @@ using MatrixFactorizations, ArrayLayouts, Test
                     @test_throws DimensionMismatch rmul!(Matrix{eltya}(I, n+1, n+1),q)
                     @test rmul!(squareQ(q), adjoint(q)) ≈ Matrix(I, n, n)
                     @test_throws DimensionMismatch rmul!(Matrix{eltya}(I, n+1, n+1),adjoint(q))
-                    @test_throws ErrorException size(q,-1)
+                    @test_throws (VERSION < v"1.13-" ? ErrorException : BoundsError) size(q,-1)
                     @test_throws DimensionMismatch q * Matrix{Int8}(I, n+4, n+4)
                 end
             end
