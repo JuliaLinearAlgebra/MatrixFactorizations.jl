@@ -4,7 +4,7 @@
 export polar, PolarDecomposition
 
 """
-    polar(A; algorithm::Symbol, maxiter, tol, verbose)
+    polar(A; alg::Symbol, maxiter, tol, verbose)
 
 Compute the polar decomposition of the matrix `A`.
 
@@ -12,7 +12,7 @@ Returns a [`PolarDecomposition`](@ref).
 
 Arguments:
 
-`algorithm` (default: `:newton`) may be one of:
+`alg` (default: `:newton`) may be one of:
 - ``:newton``: scaled Newton's method
 - ``:qdwh``: the QR-based Dynamically weighted Halley (QDWH) method
 - ``:halley``: Halley's method
