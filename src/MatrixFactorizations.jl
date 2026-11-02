@@ -8,7 +8,7 @@ import LinearAlgebra.LAPACK: chkuplo, chktrans
 import LinearAlgebra: cholesky, cholesky!, norm, diag, eigvals!, eigvals, eigen!, eigen,
    qr, axpy!, ldiv!, rdiv!, mul!, lu, lu!, ldlt, ldlt!, AbstractTriangular, inv,
    chkstride1, kron, lmul!, rmul!, factorize, StructuredMatrixStyle, det, logabsdet,
-   AbstractQ, _zeros, _cut_B, _ret_size, require_one_based_indexing,
+   AbstractQ, _cut_B, _ret_size, require_one_based_indexing,
    checknonsingular, ipiv2perm, copytri!, issuccess, RealHermSymComplexHerm,
    cholcopy, checkpositivedefinite, char_uplo, copymutable_oftype, copy_similar, choltype
 
@@ -117,6 +117,10 @@ layout_getindex(A::LayoutQ, I...) =
 
 size(Q::LayoutQ, dim::Integer) = size(getfield(Q, :factors), dim == 2 ? 1 : dim)
 size(Q::LayoutQ) = size(Q, 1), size(Q, 2)
+
+# LinearAlgebra's internal helper of this name now takes a factorization, so keep a local copy.
+_zeros(::Type{T}, b::AbstractVector, n::Integer) where {T} = zeros(T, max(length(b), n))
+_zeros(::Type{T}, B::AbstractMatrix, n::Integer) where {T} = zeros(T, max(size(B, 1), n), size(B, 2))
 
 include("ul.jl")
 include("qr.jl")
